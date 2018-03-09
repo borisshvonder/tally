@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+# -*- coding: UTF-8 -*-
+"""RetroShare directory sharing tool. 
+Scans folder structure and generates <folder>.rscollection file for each
+folder found with all subfolders, subfiles and sub-.rscollection files
+listed.
+
+Therefore it is possible, traversing from the top .rscollection file
+to get entire directory tree.
+
+BUGS: Since that is a standalone tool, it has to calculate SHA-1 checksum
+for each file found, even though thouse checksums were already calculated by 
+RetroShare
+
+testing:
+
+$ python3 -m doctest tally.py
+
+invocation:
+$ python3 tally.py [options] /path/to/folder1 [... /path/to/folderN]
+"""
+
+import sys
+import os
+import os.path
+import shutil
+import optparse
+import re
+
+global CMDLINE
+CMDLINE = optparse.OptionParser(usage=__doc__)
+CMDLINE.add_option("-e", "--exclude", dest="exclude", action="append",
+  help="exclude paths using regexpes, all paths will be relative to input folders")
+#cmdline.add_option("-h", "--help", dest="help", action="store_true", 
+#  default=False, help="display help")
+
+global OPTIONS, ARGS
+global EXCLUDES
+
+def main():
+  parse_cmdline()
+  for path in input_paths():
+    refresh_path(os.path.abspath(path))
+
+def input_paths():
+  global ARGS
+  return ARGS
+
+def refresh_path(path):
+  if is_path_excluded(path): pass
+  elif os.path.isdir(path): refresh_dir(path)
+  else: pass
+
+def is_path_excluded(path):
+  global EXCLUDES
+  for regexp in EXCLUDES:
+    m = regexp.match(path)
+    if m and m.end() == len(path):
+      return True
+  return False 
+
+def refresh_dir(path):
+  contents = os.listdir(path)
+  files = []
+  dirs = []
+  for name in contents:
+    fullpath = os.path.join(path, name)
+    if os.path.isdir(fullpath):
+      dirs.append(fullpath)
+    elif os.path.isfile(fullpath):
+      dirname = dirname_from_collection(fullpath)
+      if not dirname or not os.path.exists(dirname):
+        files.append(fullpath)
+
+  for d in dirs: 
+    refresh_dir(d)
+    collection_file = collection_from_dirname(d)
+
+    if os.path.exists(collection_file) and os.path.isfile(collection_file) and\
+       collection_file not in files: files.append(collection_file)
+
+  collection_file = collection_from_dirname(path)
+  collection = Collection.read(collection_file)
+  for f in files:
+    collection.add_file(f)
+  collection.write(collection_file)
+
+def dirname_from_collection(collection_file):
+  """Determine directory name from collection name
+  > dirname_from_collection("aaa")
+  None
+  > dirname_from_collection('.rscollection')
+  ''
+  > dirname_from_collection('dir.rscollection')
+  'dir'
+  > dirname_from_collection('DIR.RSCOLLECTION')
+  'DIR'
+  """
+  ext = '.rscollection'
+  l = len(ext)
+  if len(collection_file)>=l and collection_file.lower()[-l:]==ext:
+    return collection_file[:-l]
+
+def collection_from_dirname(path):
+  return path+'.rscollection'
+
+def parse_cmdline():
+  global CMDLINE, OPTIONS, ARGS, EXCLUDES
+  (OPTIONS, ARGS) = CMDLINE.parse_args(sys.argv)
+  if OPTIONS.exclude:
+    EXCLUDES = [re.compile(pat) for pat in OPTIONS.exclude]
+  else:
+    EXCLUDES = []
+
+class Collection:
+  @staticmethod
+  def read(path):
+    ret = Collection()
+    if os.path.exists(path):
+      print('Readin collection from '+path)
+    return ret
+
+  def write(self, path):
+    print('Writing collection to '+path)
+
+  def add_file(self, path):
+    print('Adding file '+path)
+
+if __name__ == '__main__':
+  main()
