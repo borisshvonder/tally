@@ -6,11 +6,10 @@ import sys
 
 class World:
   def __init__(self):
-    self.__console = Console()
     self._reset()
 
   def _reset(self):
-    self.console = self.__console
+    self.__console = Console()
 
 
 class Console:
