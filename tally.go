@@ -1,6 +1,10 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+
+	"serv6/rsdata"
+)
 
 func main() {
 	fmt.Println("vim-go")
