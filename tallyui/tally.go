@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"serv6/rsdata"
+	"serv6/tally/tallylib"
 )
 
 func main() {
