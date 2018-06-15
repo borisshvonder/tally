@@ -10,6 +10,7 @@ type RScollection interface {
 	ByPath(path string) RSCollectionFile
 	Iter() chan RSCollectionFile
 
+	InitEmpty()
 	LoadFrom(in bufio.Reader)
 	StoreTo(out bufio.Writer)
 }
