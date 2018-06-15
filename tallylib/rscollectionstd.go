@@ -1,7 +1,7 @@
 package tallylib
 
 import (
-	"bufio"
+	//	"bufio"
 	"time"
 )
 
