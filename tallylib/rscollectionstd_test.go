@@ -7,23 +7,68 @@ import (
 
 func TestRSCollectionFileStd(t *testing.T) {
 	var now = time.Now()
-	var file = new(RSCollectionFileStd)
-	file.path = "path1"
-	file.sha1 = "sha1"
-	file.timestamp = now
+	var fixture = new(RSCollectionFileStd)
+	fixture.path = "path1"
+	fixture.sha1 = "sha1"
+	fixture.timestamp = now
 
-	if file.Path() != "path1" {
-		t.Log("Path() does not work")
+	assertFile(t, fixture, "path1", "sha1", now)
+
+}
+
+func TestRSCollectionStd_Update(t *testing.T) {
+	var now = time.Now()
+	var path = "relative/path"
+	var sha1 = "sha1"
+	var fixture = new(RSCollectionStd)
+
+	fixture.InitEmpty()
+
+	var file = fixture.Update(path, sha1, now)
+	assertFile(t, file, path, sha1, now)
+
+	var fileByPath = fixture.ByPath(path)
+	assertFile(t, fileByPath, path, sha1, now)
+}
+
+func TestRSCollectionStd_ByPath_nil(t *testing.T) {
+	var fixture = new(RSCollectionStd)
+	fixture.InitEmpty()
+
+	var notExisting = fixture.ByPath("/missing/path")
+	if notExisting != nil {
+		t.Log("Expected nil, got " + notExisting.Path())
 		t.Fail()
 	}
+}
 
-	if file.Sha1() != "sha1" {
-		t.Log("Sha1() does not work")
+func assertFile(
+	t *testing.T,
+	file RSCollectionFile,
+	path string,
+	sha1 string,
+	timestamp time.Time) {
+
+	assertStrEquals(t, "file.Path()", path, file.Path())
+	assertStrEquals(t, "file.Sha1()", sha1, file.Sha1())
+	assertTimeEquals(t, "file.Timestamp()", timestamp, file.Timestamp())
+
+}
+
+func assertStrEquals(t *testing.T, context string, expected string, actual string) {
+
+	if expected != actual {
+		t.Log(context + ": expected '" + expected +
+			"', actual '" + actual + "'")
 		t.Fail()
 	}
+}
 
-	if file.Timestamp() != now {
-		t.Log("Timestamp() does not work")
+func assertTimeEquals(t *testing.T, context string, expected time.Time, actual time.Time) {
+
+	if expected != actual {
+		t.Log(context + ": expected '" + expected.String() +
+			"', actual '" + actual.String() + "'")
 		t.Fail()
 	}
 }
