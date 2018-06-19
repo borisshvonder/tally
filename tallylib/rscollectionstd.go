@@ -34,6 +34,12 @@ func (coll *RSCollectionStd) Update(
 	return file
 }
 
+func (coll *RSCollectionStd) Iter(cb func(RSCollectionFile)) {
+	for _, v := range coll.files {
+		cb(v)
+	}
+}
+
 func (coll *RSCollectionStd) ByPath(path string) RSCollectionFile {
 	return coll.files[path]
 }

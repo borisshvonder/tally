@@ -8,7 +8,7 @@ import (
 type RScollection interface {
 	Update(path string, sha1 string, timestamp time.Time) RSCollectionFile
 	ByPath(path string) RSCollectionFile
-	Iter() chan RSCollectionFile
+	Iter(cb func(RSCollectionFile))
 
 	InitEmpty()
 	LoadFrom(in bufio.Reader)

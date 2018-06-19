@@ -1,6 +1,7 @@
 package tallylib
 
 import (
+	"strconv"
 	"testing"
 	"time"
 )
@@ -17,12 +18,12 @@ func TestRSCollectionFileStd(t *testing.T) {
 }
 
 func TestRSCollectionStd_Update(t *testing.T) {
+	var fixture = new(RSCollectionStd)
+	fixture.InitEmpty()
+
 	var now = time.Now()
 	var path = "relative/path"
 	var sha1 = "sha1"
-	var fixture = new(RSCollectionStd)
-
-	fixture.InitEmpty()
 
 	var file = fixture.Update(path, sha1, now)
 	assertFile(t, file, path, sha1, now)
@@ -40,6 +41,30 @@ func TestRSCollectionStd_ByPath_nil(t *testing.T) {
 		t.Log("Expected nil, got " + notExisting.Path())
 		t.Fail()
 	}
+}
+
+func TestRSCollectionStd_Iter(t *testing.T) {
+	var fixture = new(RSCollectionStd)
+	fixture.InitEmpty()
+
+	var now = time.Now()
+	var path = "relative/path"
+	var sha1 = "sha1"
+
+	fixture.Update(path, sha1, now)
+
+	var files [1]RSCollectionFile
+	var i = 0
+	fixture.Iter(func(file RSCollectionFile) {
+		files[i] = file
+		i++
+	})
+
+	if i != 1 {
+		t.Log("got " + strconv.Itoa(i) + " files")
+		t.Fail()
+	}
+	assertFile(t, files[0], path, sha1, now)
 }
 
 func assertFile(
