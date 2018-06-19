@@ -1,0 +1,2 @@
+1) Is there an Object type in go ?
+2) What is by-value equality vs identity equality ?
