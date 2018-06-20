@@ -2,6 +2,7 @@ package tallylib
 
 import (
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -65,6 +66,22 @@ func TestRSCollectionStd_Visit(t *testing.T) {
 		t.Fail()
 	}
 	assertFile(t, files[0], path, sha1, now)
+}
+
+func TestRSCollectionStd_LoadFrom_empty_xml(t *testing.T) {
+	var reader = strings.NewReader("")
+	var fixture = new(RSCollectionStd)
+
+	fixture.LoadFrom(reader)
+
+	assertEmptyCollection(t, fixture)
+}
+
+func assertEmptyCollection(t *testing.T, fixture RSCollection) {
+	fixture.Visit(func(file RSCollectionFile) {
+		t.Log("Error: collection contains file " + file.Path())
+		t.Fail()
+	})
 }
 
 func assertFile(

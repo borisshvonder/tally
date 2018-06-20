@@ -1,7 +1,7 @@
 package tallylib
 
 import (
-	//	"bufio"
+	"io"
 	"time"
 )
 
@@ -17,6 +17,9 @@ type RSCollectionFileStd struct {
 
 func (coll *RSCollectionStd) InitEmpty() {
 	coll.files = make(map[string]RSCollectionFile)
+}
+
+func (coll *RSCollectionStd) StoreTo(out io.Writer) {
 }
 
 func (coll *RSCollectionStd) Update(
@@ -42,6 +45,10 @@ func (coll *RSCollectionStd) Visit(cb func(RSCollectionFile)) {
 
 func (coll *RSCollectionStd) ByPath(path string) RSCollectionFile {
 	return coll.files[path]
+}
+
+func (coll *RSCollectionStd) LoadFrom(in io.Reader) {
+	coll.files = make(map[string]RSCollectionFile)
 }
 
 func (file *RSCollectionFileStd) Path() string {

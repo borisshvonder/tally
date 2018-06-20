@@ -1,18 +1,18 @@
 package tallylib
 
 import (
-	"bufio"
+	"io"
 	"time"
 )
 
-type RScollection interface {
+type RSCollection interface {
 	Update(path string, sha1 string, timestamp time.Time) RSCollectionFile
 	ByPath(path string) RSCollectionFile
 	Visit(cb func(RSCollectionFile))
 
 	InitEmpty()
-	LoadFrom(in bufio.Reader)
-	StoreTo(out bufio.Writer)
+	LoadFrom(in io.Reader)
+	StoreTo(out io.Writer)
 }
 
 type RSCollectionFile interface {
