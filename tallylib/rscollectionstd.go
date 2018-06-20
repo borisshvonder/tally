@@ -34,7 +34,7 @@ func (coll *RSCollectionStd) Update(
 	return file
 }
 
-func (coll *RSCollectionStd) Iter(cb func(RSCollectionFile)) {
+func (coll *RSCollectionStd) Visit(cb func(RSCollectionFile)) {
 	for _, v := range coll.files {
 		cb(v)
 	}

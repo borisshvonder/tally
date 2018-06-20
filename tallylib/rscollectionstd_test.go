@@ -43,7 +43,7 @@ func TestRSCollectionStd_ByPath_nil(t *testing.T) {
 	}
 }
 
-func TestRSCollectionStd_Iter(t *testing.T) {
+func TestRSCollectionStd_Visit(t *testing.T) {
 	var fixture = new(RSCollectionStd)
 	fixture.InitEmpty()
 
@@ -55,7 +55,7 @@ func TestRSCollectionStd_Iter(t *testing.T) {
 
 	var files [1]RSCollectionFile
 	var i = 0
-	fixture.Iter(func(file RSCollectionFile) {
+	fixture.Visit(func(file RSCollectionFile) {
 		files[i] = file
 		i++
 	})
