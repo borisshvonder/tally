@@ -69,12 +69,33 @@ func TestRSCollectionStd_Visit(t *testing.T) {
 }
 
 func TestRSCollectionStd_LoadFrom_empty_xml(t *testing.T) {
-	var reader = strings.NewReader("")
-	var fixture = new(RSCollectionStd)
-
-	fixture.LoadFrom(reader)
+	var fixture = loadCollectionFromString("")
 
 	assertEmptyCollection(t, fixture)
+}
+
+func TestRSCollectionStd_LoadFrom_oneRecord(t *testing.T) {
+	var xml = `<!DOCTYPE RsCollection>
+		<RsCollection>
+			<File sha1="8551d11f6e8d3ec2731f70a2573b887637e94559" 
+				name="name1" size="1024" 
+       				updated="2018-02-28T18:30:01.123Z"/>
+		</RsCollection>`
+
+	var fixture = loadCollectionFromString(xml)
+
+	var file = fixture.ByPath("name1")
+	var expectedTimestamp, _ = time.Parse(time.RFC3339, "2018-02-28T18:30:01.123Z")
+
+	assertFile(t, file, "name1", "8551d11f6e8d3ec2731f70a2573b887637e94559",
+		expectedTimestamp)
+}
+
+func loadCollectionFromString(xml string) *RSCollectionStd {
+	var reader = strings.NewReader(xml)
+	var fixture = new(RSCollectionStd)
+	fixture.LoadFrom(reader)
+	return fixture
 }
 
 func assertEmptyCollection(t *testing.T, fixture RSCollection) {

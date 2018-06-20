@@ -1,7 +1,9 @@
 package tallylib
 
 import (
+	"encoding/xml"
 	"io"
+	"io/ioutil"
 	"time"
 )
 
@@ -47,8 +49,32 @@ func (coll *RSCollectionStd) ByPath(path string) RSCollectionFile {
 	return coll.files[path]
 }
 
+type XmlRsCollection struct {
+	XMLName xml.Name   `xml:"RsCollection"`
+	Files   []*XmlFile `xml:"File"`
+}
+
+type XmlFile struct {
+	XMLName xml.Name `xml:"File"`
+	Sha1    string   `xml:"sha1,attr"`
+	Name    string   `xml:"name,attr"`
+	Size    uint64   `xml:"size,attr"`
+	Updated string   `xml:"updated,attr"`
+}
+
 func (coll *RSCollectionStd) LoadFrom(in io.Reader) {
+	var data, _ = ioutil.ReadAll(in)
+	var parsed = new(XmlRsCollection)
+
+	var _ = xml.Unmarshal(data, parsed)
+
 	coll.files = make(map[string]RSCollectionFile)
+
+	for i := range parsed.Files {
+		var xmlFile = parsed.Files[i]
+		var timestamp, _ = time.Parse(time.RFC3339, xmlFile.Updated)
+		coll.Update(xmlFile.Name, xmlFile.Sha1, timestamp)
+	}
 }
 
 func (file *RSCollectionFileStd) Path() string {
