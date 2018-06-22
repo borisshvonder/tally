@@ -7,29 +7,34 @@ import (
 	"time"
 )
 
-type RSCollectionStd struct {
+func New() RSCollection {
+	var ret = new(collection)
+	return ret
+}
+
+type collection struct {
 	files map[string]RSCollectionFile
 }
 
-type RSCollectionFileStd struct {
+type file struct {
 	path      string
 	sha1      string
 	timestamp time.Time
 }
 
-func (coll *RSCollectionStd) InitEmpty() {
+func (coll *collection) InitEmpty() {
 	coll.files = make(map[string]RSCollectionFile)
 }
 
-func (coll *RSCollectionStd) StoreTo(out io.Writer) {
+func (coll *collection) StoreTo(out io.Writer) {
 }
 
-func (coll *RSCollectionStd) Update(
+func (coll *collection) Update(
 	path string,
 	sha1 string,
 	timestamp time.Time) RSCollectionFile {
 
-	var file = new(RSCollectionFileStd)
+	var file = new(file)
 	file.path = path
 	file.sha1 = sha1
 	file.timestamp = timestamp
@@ -39,13 +44,13 @@ func (coll *RSCollectionStd) Update(
 	return file
 }
 
-func (coll *RSCollectionStd) Visit(cb func(RSCollectionFile)) {
+func (coll *collection) Visit(cb func(RSCollectionFile)) {
 	for _, v := range coll.files {
 		cb(v)
 	}
 }
 
-func (coll *RSCollectionStd) ByPath(path string) RSCollectionFile {
+func (coll *collection) ByPath(path string) RSCollectionFile {
 	return coll.files[path]
 }
 
@@ -62,7 +67,7 @@ type XmlFile struct {
 	Updated string   `xml:"updated,attr"`
 }
 
-func (coll *RSCollectionStd) LoadFrom(in io.Reader) {
+func (coll *collection) LoadFrom(in io.Reader) {
 	var data, _ = ioutil.ReadAll(in)
 	var parsed = new(XmlRsCollection)
 
@@ -77,14 +82,14 @@ func (coll *RSCollectionStd) LoadFrom(in io.Reader) {
 	}
 }
 
-func (file *RSCollectionFileStd) Path() string {
+func (file *file) Path() string {
 	return file.path
 }
 
-func (file *RSCollectionFileStd) Sha1() string {
+func (file *file) Sha1() string {
 	return file.sha1
 }
 
-func (file *RSCollectionFileStd) Timestamp() time.Time {
+func (file *file) Timestamp() time.Time {
 	return file.timestamp
 }

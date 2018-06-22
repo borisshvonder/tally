@@ -7,19 +7,8 @@ import (
 	"time"
 )
 
-func TestRSCollectionFileStd(t *testing.T) {
-	var now = time.Now()
-	var fixture = new(RSCollectionFileStd)
-	fixture.path = "path1"
-	fixture.sha1 = "sha1"
-	fixture.timestamp = now
-
-	assertFile(t, fixture, "path1", "sha1", now)
-
-}
-
-func TestRSCollectionStd_Update(t *testing.T) {
-	var fixture = new(RSCollectionStd)
+func Test_Update(t *testing.T) {
+	var fixture = New()
 	fixture.InitEmpty()
 
 	var now = time.Now()
@@ -33,8 +22,8 @@ func TestRSCollectionStd_Update(t *testing.T) {
 	assertFile(t, fileByPath, path, sha1, now)
 }
 
-func TestRSCollectionStd_ByPath_nil(t *testing.T) {
-	var fixture = new(RSCollectionStd)
+func Test_ByPath_nil(t *testing.T) {
+	var fixture = New()
 	fixture.InitEmpty()
 
 	var notExisting = fixture.ByPath("/missing/path")
@@ -44,8 +33,8 @@ func TestRSCollectionStd_ByPath_nil(t *testing.T) {
 	}
 }
 
-func TestRSCollectionStd_Visit(t *testing.T) {
-	var fixture = new(RSCollectionStd)
+func Test_Visit(t *testing.T) {
+	var fixture = New()
 	fixture.InitEmpty()
 
 	var now = time.Now()
@@ -68,13 +57,13 @@ func TestRSCollectionStd_Visit(t *testing.T) {
 	assertFile(t, files[0], path, sha1, now)
 }
 
-func TestRSCollectionStd_LoadFrom_empty_xml(t *testing.T) {
+func Test_LoadFrom_empty_xml(t *testing.T) {
 	var fixture = loadCollectionFromString("")
 
 	assertEmptyCollection(t, fixture)
 }
 
-func TestRSCollectionStd_LoadFrom_oneRecord(t *testing.T) {
+func Test_LoadFrom_oneRecord(t *testing.T) {
 	var xml = `<!DOCTYPE RsCollection>
 		<RsCollection>
 			<File sha1="8551d11f6e8d3ec2731f70a2573b887637e94559" 
@@ -91,9 +80,9 @@ func TestRSCollectionStd_LoadFrom_oneRecord(t *testing.T) {
 		expectedTimestamp)
 }
 
-func loadCollectionFromString(xml string) *RSCollectionStd {
+func loadCollectionFromString(xml string) RSCollection {
 	var reader = strings.NewReader(xml)
-	var fixture = new(RSCollectionStd)
+	var fixture = New()
 	fixture.LoadFrom(reader)
 	return fixture
 }
