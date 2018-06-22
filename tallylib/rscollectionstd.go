@@ -4,7 +4,6 @@ import (
 	"encoding/xml"
 	"io"
 	"io/ioutil"
-	"strconv"
 	"time"
 )
 
@@ -34,11 +33,13 @@ func (coll *collection) StoreTo(out io.Writer) {
 func (coll *collection) Update(
 	path string,
 	sha1 string,
+	size uint64,
 	timestamp time.Time) RSCollectionFile {
 
 	var file = new(file)
 	file.path = path
 	file.sha1 = sha1
+	file.size = size
 	file.timestamp = timestamp
 
 	coll.files[path] = file
@@ -65,7 +66,7 @@ type XmlFile struct {
 	XMLName xml.Name `xml:"File"`
 	Sha1    string   `xml:"sha1,attr"`
 	Name    string   `xml:"name,attr"`
-	Size    string   `xml:"size,attr"`
+	Size    uint64   `xml:"size,attr"`
 	Updated string   `xml:"updated,attr"`
 }
 
@@ -88,13 +89,10 @@ func xmlToStd(xmlFile *XmlFile) *file {
 	var ret = new(file)
 	ret.path = xmlFile.Name
 	ret.sha1 = xmlFile.Sha1
+	ret.size = xmlFile.Size
 
 	if xmlFile.Updated != "" {
 		ret.timestamp, _ = time.Parse(time.RFC3339, xmlFile.Updated)
-	}
-
-	if xmlFile.Size != "" {
-		ret.size, _ = strconv.ParseUint(xmlFile.Size, 10, 64)
 	}
 
 	return ret

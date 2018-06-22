@@ -6,7 +6,9 @@ import (
 )
 
 type RSCollection interface {
-	Update(path string, sha1 string, timestamp time.Time) RSCollectionFile
+	Update(path string, sha1 string, size uint64,
+		timestamp time.Time) RSCollectionFile
+
 	ByPath(path string) RSCollectionFile
 	Visit(cb func(RSCollectionFile))
 

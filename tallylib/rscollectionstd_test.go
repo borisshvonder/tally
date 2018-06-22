@@ -13,13 +13,14 @@ func Test_Update(t *testing.T) {
 
 	var now = time.Now()
 	var path = "relative/path"
+	var size uint64 = 1234
 	var sha1 = "sha1"
 
-	var file = fixture.Update(path, sha1, now)
-	assertFile(t, file, path, sha1, now)
+	var file = fixture.Update(path, sha1, size, now)
+	assertFile(t, file, path, sha1, size, now)
 
 	var fileByPath = fixture.ByPath(path)
-	assertFile(t, fileByPath, path, sha1, now)
+	assertFile(t, fileByPath, path, sha1, size, now)
 }
 
 func Test_ByPath_nil(t *testing.T) {
@@ -39,9 +40,10 @@ func Test_Visit(t *testing.T) {
 
 	var now = time.Now()
 	var path = "relative/path"
+	var size uint64 = 12345
 	var sha1 = "sha1"
 
-	fixture.Update(path, sha1, now)
+	fixture.Update(path, sha1, size, now)
 
 	var files [1]RSCollectionFile
 	var i = 0
@@ -54,7 +56,7 @@ func Test_Visit(t *testing.T) {
 		t.Log("got " + strconv.Itoa(i) + " files")
 		t.Fail()
 	}
-	assertFile(t, files[0], path, sha1, now)
+	assertFile(t, files[0], path, sha1, size, now)
 }
 
 func Test_LoadFrom_empty_xml(t *testing.T) {
@@ -77,7 +79,7 @@ func Test_LoadFrom_oneRecord(t *testing.T) {
 	var expectedTimestamp, _ = time.Parse(time.RFC3339, "2018-02-28T18:30:01.123Z")
 
 	assertFile(t, file, "name1", "8551d11f6e8d3ec2731f70a2573b887637e94559",
-		expectedTimestamp)
+		1024, expectedTimestamp)
 }
 
 func loadCollectionFromString(xml string) RSCollection {
@@ -99,15 +101,17 @@ func assertFile(
 	file RSCollectionFile,
 	path string,
 	sha1 string,
+	size uint64,
 	timestamp time.Time) {
 
 	assertStrEquals(t, "file.Path()", path, file.Path())
 	assertStrEquals(t, "file.Sha1()", sha1, file.Sha1())
+	assertUint64Equals(t, "file.Size()", size, file.Size())
 	assertTimeEquals(t, "file.Timestamp()", timestamp, file.Timestamp())
-
 }
 
-func assertStrEquals(t *testing.T, context string, expected string, actual string) {
+func assertStrEquals(t *testing.T, context string, expected string,
+	actual string) {
 
 	if expected != actual {
 		t.Log(context + ": expected '" + expected +
@@ -116,7 +120,21 @@ func assertStrEquals(t *testing.T, context string, expected string, actual strin
 	}
 }
 
-func assertTimeEquals(t *testing.T, context string, expected time.Time, actual time.Time) {
+func assertUint64Equals(t *testing.T, context string, expected uint64,
+	actual uint64) {
+
+	if expected != actual {
+		t.Log(context + ": expected '" +
+			strconv.FormatUint(expected, 10) +
+			"', actual '" +
+			strconv.FormatUint(actual, 10) +
+			"'")
+		t.Fail()
+	}
+}
+
+func assertTimeEquals(t *testing.T, context string, expected time.Time,
+	actual time.Time) {
 
 	if expected != actual {
 		t.Log(context + ": expected '" + expected.String() +
