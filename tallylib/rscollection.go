@@ -18,5 +18,6 @@ type RSCollection interface {
 type RSCollectionFile interface {
 	Path() string
 	Sha1() string
+	Size() uint64
 	Timestamp() time.Time
 }

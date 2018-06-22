@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"io"
 	"io/ioutil"
+	"strconv"
 	"time"
 )
 
@@ -19,6 +20,7 @@ type collection struct {
 type file struct {
 	path      string
 	sha1      string
+	size      uint64
 	timestamp time.Time
 }
 
@@ -63,7 +65,7 @@ type XmlFile struct {
 	XMLName xml.Name `xml:"File"`
 	Sha1    string   `xml:"sha1,attr"`
 	Name    string   `xml:"name,attr"`
-	Size    uint64   `xml:"size,attr"`
+	Size    string   `xml:"size,attr"`
 	Updated string   `xml:"updated,attr"`
 }
 
@@ -77,9 +79,25 @@ func (coll *collection) LoadFrom(in io.Reader) {
 
 	for i := range parsed.Files {
 		var xmlFile = parsed.Files[i]
-		var timestamp, _ = time.Parse(time.RFC3339, xmlFile.Updated)
-		coll.Update(xmlFile.Name, xmlFile.Sha1, timestamp)
+		var file = xmlToStd(xmlFile)
+		coll.files[file.path] = file
 	}
+}
+
+func xmlToStd(xmlFile *XmlFile) *file {
+	var ret = new(file)
+	ret.path = xmlFile.Name
+	ret.sha1 = xmlFile.Sha1
+
+	if xmlFile.Updated != "" {
+		ret.timestamp, _ = time.Parse(time.RFC3339, xmlFile.Updated)
+	}
+
+	if xmlFile.Size != "" {
+		ret.size, _ = strconv.ParseUint(xmlFile.Size, 10, 64)
+	}
+
+	return ret
 }
 
 func (file *file) Path() string {
@@ -88,6 +106,10 @@ func (file *file) Path() string {
 
 func (file *file) Sha1() string {
 	return file.sha1
+}
+
+func (file *file) Size() uint64 {
+	return file.size
 }
 
 func (file *file) Timestamp() time.Time {
