@@ -60,9 +60,13 @@ func Test_Visit(t *testing.T) {
 }
 
 func Test_LoadFrom_empty_xml(t *testing.T) {
-	var fixture = loadCollectionFromString("")
-
-	assertEmptyCollection(t, fixture)
+	var fixture, err = loadCollectionFromString("")
+	if err == nil {
+		t.Log("EOF error expected on empty file")
+		t.Fail()
+	} else {
+		assertEmptyCollection(t, fixture)
+	}
 }
 
 func Test_LoadFrom_oneRecord(t *testing.T) {
@@ -73,20 +77,35 @@ func Test_LoadFrom_oneRecord(t *testing.T) {
        				updated="2018-02-28T18:30:01.123Z"/>
 		</RsCollection>`
 
-	var fixture = loadCollectionFromString(xml)
+	var fixture, err = loadCollectionFromString(xml)
+	if err != nil {
+		failOnError(t, err)
+	} else {
+		var file = fixture.ByPath("name1")
 
-	var file = fixture.ByPath("name1")
-	var expectedTimestamp, _ = time.Parse(time.RFC3339, "2018-02-28T18:30:01.123Z")
+		var expectedTimestamp, err = time.Parse(time.RFC3339,
+			"2018-02-28T18:30:01.123Z")
 
-	assertFile(t, file, "name1", "8551d11f6e8d3ec2731f70a2573b887637e94559",
-		1024, expectedTimestamp)
+		if err != nil {
+			failOnError(t, err)
+		}
+
+		assertFile(t, file, "name1",
+			"8551d11f6e8d3ec2731f70a2573b887637e94559",
+			1024, expectedTimestamp)
+	}
 }
 
-func loadCollectionFromString(xml string) RSCollection {
+func failOnError(t *testing.T, err error) {
+	t.Log(err.Error())
+	t.Fail()
+}
+
+func loadCollectionFromString(xml string) (RSCollection, error) {
 	var reader = strings.NewReader(xml)
 	var fixture = New()
-	fixture.LoadFrom(reader)
-	return fixture
+	var err = fixture.LoadFrom(reader)
+	return fixture, err
 }
 
 func assertEmptyCollection(t *testing.T, fixture RSCollection) {

@@ -13,7 +13,7 @@ type RSCollection interface {
 	Visit(cb func(RSCollectionFile))
 
 	InitEmpty()
-	LoadFrom(in io.Reader)
+	LoadFrom(in io.Reader) error
 	StoreTo(out io.Writer)
 }
 

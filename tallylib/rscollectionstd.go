@@ -2,6 +2,7 @@ package tallylib
 
 import (
 	"encoding/xml"
+	"errors"
 	"io"
 	"io/ioutil"
 	"time"
@@ -70,32 +71,47 @@ type XmlFile struct {
 	Updated string   `xml:"updated,attr"`
 }
 
-func (coll *collection) LoadFrom(in io.Reader) {
+func (coll *collection) LoadFrom(in io.Reader) error {
 	var data, _ = ioutil.ReadAll(in)
 	var parsed = new(XmlRsCollection)
 
-	var _ = xml.Unmarshal(data, parsed)
+	var err = xml.Unmarshal(data, parsed)
+	if err != nil {
+		return err
+	}
+
+	var errs string
 
 	coll.files = make(map[string]RSCollectionFile)
 
 	for i := range parsed.Files {
 		var xmlFile = parsed.Files[i]
-		var file = xmlToStd(xmlFile)
+		var file, err = xmlToStd(xmlFile)
+		if err != nil {
+			errs += err.Error() + " "
+		}
 		coll.files[file.path] = file
 	}
+
+	if errs != "" {
+		err = errors.New(errs)
+	}
+
+	return err
 }
 
-func xmlToStd(xmlFile *XmlFile) *file {
+func xmlToStd(xmlFile *XmlFile) (*file, error) {
 	var ret = new(file)
 	ret.path = xmlFile.Name
 	ret.sha1 = xmlFile.Sha1
 	ret.size = xmlFile.Size
+	var err error
 
 	if xmlFile.Updated != "" {
-		ret.timestamp, _ = time.Parse(time.RFC3339, xmlFile.Updated)
+		ret.timestamp, err = time.Parse(time.RFC3339, xmlFile.Updated)
 	}
 
-	return ret
+	return ret, err
 }
 
 func (file *file) Path() string {
