@@ -28,7 +28,8 @@ func (coll *collection) InitEmpty() {
 	coll.files = make(map[string]RSCollectionFile)
 }
 
-func (coll *collection) StoreTo(out io.Writer) {
+func (coll *collection) StoreTo(out io.Writer) error {
+	return errors.New("NIY")
 }
 
 func (coll *collection) Update(

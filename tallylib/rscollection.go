@@ -14,7 +14,7 @@ type RSCollection interface {
 
 	InitEmpty()
 	LoadFrom(in io.Reader) error
-	StoreTo(out io.Writer)
+	StoreTo(out io.Writer) error
 }
 
 type RSCollectionFile interface {
