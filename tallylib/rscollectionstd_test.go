@@ -1,6 +1,8 @@
 package tallylib
 
 import (
+	"bytes"
+	"io"
 	"strconv"
 	"strings"
 	"testing"
@@ -94,6 +96,15 @@ func Test_LoadFrom_oneRecord(t *testing.T) {
 			"8551d11f6e8d3ec2731f70a2573b887637e94559",
 			1024, expectedTimestamp)
 	}
+}
+
+func Test_StoreTo_emptyCollection(t *testing.T) {
+	var coll = New()
+	var buf bytes.Buffer
+	coll.StoreTo(io.Writer(&buf))
+
+	var str = buf.String()
+	assertStrEquals(t, "coll.StoreTo()", "<RsCollection></RsCollection>", str)
 }
 
 func failOnError(t *testing.T, err error) {

@@ -28,10 +28,6 @@ func (coll *collection) InitEmpty() {
 	coll.files = make(map[string]RSCollectionFile)
 }
 
-func (coll *collection) StoreTo(out io.Writer) error {
-	return errors.New("NIY")
-}
-
 func (coll *collection) Update(
 	path string,
 	sha1 string,
@@ -87,7 +83,7 @@ func (coll *collection) LoadFrom(in io.Reader) error {
 
 	for i := range parsed.Files {
 		var xmlFile = parsed.Files[i]
-		var file, err = xmlToStd(xmlFile)
+		var file, err = xmlFileToStd(xmlFile)
 		if err != nil {
 			errs += err.Error() + " "
 		}
@@ -101,7 +97,25 @@ func (coll *collection) LoadFrom(in io.Reader) error {
 	return err
 }
 
-func xmlToStd(xmlFile *XmlFile) (*file, error) {
+func (coll *collection) StoreTo(out io.Writer) error {
+	var xmlColl = new(XmlRsCollection)
+	xmlColl.Files = make([]*XmlFile, len(coll.files))
+
+	var i = 0
+	for _, v := range coll.files {
+		xmlColl.Files[i] = stdFileToXml(v)
+	}
+
+	var data, err = xml.Marshal(xmlColl)
+
+	if err == nil {
+		_, err = out.Write(data)
+	}
+
+	return err
+}
+
+func xmlFileToStd(xmlFile *XmlFile) (*file, error) {
 	var ret = new(file)
 	ret.path = xmlFile.Name
 	ret.sha1 = xmlFile.Sha1
@@ -109,10 +123,23 @@ func xmlToStd(xmlFile *XmlFile) (*file, error) {
 	var err error
 
 	if xmlFile.Updated != "" {
-		ret.timestamp, err = time.Parse(time.RFC3339, xmlFile.Updated)
+		ret.timestamp, err = time.Parse(time.RFC3339Nano,
+			xmlFile.Updated)
 	}
 
 	return ret, err
+}
+
+func stdFileToXml(file RSCollectionFile) *XmlFile {
+	var ret = new(XmlFile)
+	ret.Name = file.Path()
+	ret.Sha1 = file.Sha1()
+	ret.Size = file.Size()
+	var timestamp = file.Timestamp()
+	if timestamp != (time.Time{}) {
+		ret.Updated = timestamp.Format(time.RFC3339Nano)
+	}
+	return ret
 }
 
 func (file *file) Path() string {
