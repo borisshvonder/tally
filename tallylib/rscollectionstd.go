@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const xmlHeader = "<!DOCTYPE RsCollection>\n"
+
 func New() RSCollection {
 	var ret = new(collection)
 	return ret
@@ -106,7 +108,10 @@ func (coll *collection) StoreTo(out io.Writer) error {
 		xmlColl.Files[i] = stdFileToXml(v)
 	}
 
-	var data, err = xml.Marshal(xmlColl)
+	var _, err = out.Write([]byte(xmlHeader))
+
+	var data []byte
+	data, err = xml.Marshal(xmlColl)
 
 	if err == nil {
 		_, err = out.Write(data)

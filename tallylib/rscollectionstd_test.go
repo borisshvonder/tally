@@ -143,7 +143,7 @@ func Test_StoreTo_emptyCollection(t *testing.T) {
 	coll.StoreTo(io.Writer(&buf))
 
 	var str = buf.String()
-	assertStrEquals(t, "coll.StoreTo()", "<RsCollection></RsCollection>", str)
+	assertStrEquals(t, "coll.StoreTo()", "<!DOCTYPE RsCollection>\n<RsCollection></RsCollection>", str)
 }
 
 func failOnError(t *testing.T, err error) {
