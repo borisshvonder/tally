@@ -71,6 +71,22 @@ func Test_LoadFrom_empty_xml(t *testing.T) {
 	}
 }
 
+func Test_LoadFrom_empty(t *testing.T) {
+	var xml = "<RsCollection/>"
+
+	var fixture, err = loadCollectionFromString(xml)
+	if err != nil {
+		failOnError(t, err)
+	} else {
+		var size = 0
+		fixture.Visit(func(file RSCollectionFile) {
+			size += 1
+		})
+
+		assertIntEquals(t, "Test_LoadFrom_empty", 0, size)
+	}
+}
+
 func Test_LoadFrom_oneRecord(t *testing.T) {
 	var xml = `<!DOCTYPE RsCollection>
 		<RsCollection>
@@ -95,6 +111,29 @@ func Test_LoadFrom_oneRecord(t *testing.T) {
 		assertFile(t, file, "name1",
 			"8551d11f6e8d3ec2731f70a2573b887637e94559",
 			1024, expectedTimestamp)
+	}
+}
+
+func Test_LoadFrom_multipleRecords(t *testing.T) {
+	var xml = `<!DOCTYPE RsCollection>
+		<RsCollection>
+			<File sha1="8551d11f6e8d3ec2731f70a2573b887637e94559" 
+				name="name1" size="1024" />
+			<File sha1="6551d11f6e8d3ec2731f70a2573b887637e94559" 
+				name="name2" />
+		</RsCollection>`
+
+	var fixture, err = loadCollectionFromString(xml)
+	if err != nil {
+		failOnError(t, err)
+	} else {
+		assertFile(t, fixture.ByPath("name1"), "name1",
+			"8551d11f6e8d3ec2731f70a2573b887637e94559",
+			1024, (time.Time{}))
+
+		assertFile(t, fixture.ByPath("name2"), "name2",
+			"6551d11f6e8d3ec2731f70a2573b887637e94559",
+			0, (time.Time{}))
 	}
 }
 
@@ -146,6 +185,19 @@ func assertStrEquals(t *testing.T, context string, expected string,
 	if expected != actual {
 		t.Log(context + ": expected '" + expected +
 			"', actual '" + actual + "'")
+		t.Fail()
+	}
+}
+
+func assertIntEquals(t *testing.T, context string, expected int,
+	actual int) {
+
+	if expected != actual {
+		t.Log(context + ": expected '" +
+			strconv.Itoa(expected) +
+			"', actual '" +
+			strconv.Itoa(actual) +
+			"'")
 		t.Fail()
 	}
 }
