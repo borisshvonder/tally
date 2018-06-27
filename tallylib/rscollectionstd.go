@@ -106,6 +106,7 @@ func (coll *collection) StoreTo(out io.Writer) error {
 	var i = 0
 	for _, v := range coll.files {
 		xmlColl.Files[i] = stdFileToXml(v)
+		i += 1
 	}
 
 	var _, err = out.Write([]byte(xmlHeader))

@@ -146,6 +146,47 @@ func Test_StoreTo_emptyCollection(t *testing.T) {
 	assertStrEquals(t, "coll.StoreTo()", "<!DOCTYPE RsCollection>\n<RsCollection></RsCollection>", str)
 }
 
+func Test_StoreTo_oneRecord(t *testing.T) {
+	var coll = New()
+	coll.InitEmpty()
+	coll.Update("name1", "sha1", 1024, (time.Time{}))
+
+	var buf bytes.Buffer
+	coll.StoreTo(io.Writer(&buf))
+
+	var str = buf.String()
+	assertStrEquals(t, "coll.StoreTo()",
+		`<!DOCTYPE RsCollection>
+<RsCollection><File sha1="sha1" name="name1" size="1024" updated=""></File></RsCollection>`, str)
+}
+
+func Test_StoreTo_multipleRecords(t *testing.T) {
+	var coll = New()
+	coll.InitEmpty()
+	coll.Update("name1", "sha1", 0, (time.Time{}))
+	coll.Update("name2", "", 0, (time.Time{}))
+
+	var buf bytes.Buffer
+	coll.StoreTo(io.Writer(&buf))
+
+	var str = buf.String()
+
+	if strings.Index(str, "name1") < 0 {
+		t.Log("name1 not found in " + str)
+		t.Fail()
+	}
+
+	if strings.Index(str, "sha1") < 0 {
+		t.Log("sha1 not found in " + str)
+		t.Fail()
+	}
+	if strings.Index(str, "name2") < 0 {
+		t.Log("name2 not found in " + str)
+		t.Fail()
+	}
+
+}
+
 func failOnError(t *testing.T, err error) {
 	t.Log(err.Error())
 	t.Fail()
