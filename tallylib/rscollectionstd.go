@@ -22,7 +22,7 @@ type collection struct {
 type file struct {
 	path      string
 	sha1      string
-	size      uint64
+	size      int64
 	timestamp time.Time
 }
 
@@ -33,7 +33,7 @@ func (coll *collection) InitEmpty() {
 func (coll *collection) Update(
 	path string,
 	sha1 string,
-	size uint64,
+	size int64,
 	timestamp time.Time) RSCollectionFile {
 
 	var file = new(file)
@@ -66,7 +66,7 @@ type XmlFile struct {
 	XMLName xml.Name `xml:"File"`
 	Sha1    string   `xml:"sha1,attr"`
 	Name    string   `xml:"name,attr"`
-	Size    uint64   `xml:"size,attr"`
+	Size    int64    `xml:"size,attr"`
 	Updated string   `xml:"updated,attr"`
 }
 
@@ -156,7 +156,7 @@ func (file *file) Sha1() string {
 	return file.sha1
 }
 
-func (file *file) Size() uint64 {
+func (file *file) Size() int64 {
 	return file.size
 }
 

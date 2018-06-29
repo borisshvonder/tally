@@ -15,7 +15,7 @@ func Test_Update(t *testing.T) {
 
 	var now = time.Now()
 	var path = "relative/path"
-	var size uint64 = 1234
+	var size int64 = 1234
 	var sha1 = "sha1"
 
 	var file = fixture.Update(path, sha1, size, now)
@@ -42,7 +42,7 @@ func Test_Visit(t *testing.T) {
 
 	var now = time.Now()
 	var path = "relative/path"
-	var size uint64 = 12345
+	var size int64 = 12345
 	var sha1 = "sha1"
 
 	fixture.Update(path, sha1, size, now)
@@ -211,7 +211,7 @@ func assertFile(
 	file RSCollectionFile,
 	path string,
 	sha1 string,
-	size uint64,
+	size int64,
 	timestamp time.Time) {
 
 	assertStrEquals(t, "file.Path()", path, file.Path())
@@ -243,14 +243,14 @@ func assertIntEquals(t *testing.T, context string, expected int,
 	}
 }
 
-func assertUint64Equals(t *testing.T, context string, expected uint64,
-	actual uint64) {
+func assertUint64Equals(t *testing.T, context string, expected int64,
+	actual int64) {
 
 	if expected != actual {
 		t.Log(context + ": expected '" +
-			strconv.FormatUint(expected, 10) +
+			strconv.FormatInt(expected, 10) +
 			"', actual '" +
-			strconv.FormatUint(actual, 10) +
+			strconv.FormatInt(actual, 10) +
 			"'")
 		t.Fail()
 	}
