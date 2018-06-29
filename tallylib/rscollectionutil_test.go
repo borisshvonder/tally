@@ -7,7 +7,7 @@ import (
 )
 
 func TestUpdateFile_file_does_not_exist(t *testing.T) {
-	var coll = New()
+	var coll = NewCollection()
 	coll.InitEmpty()
 
 	var ret, err = UpdateFile(coll, "/path/does/notexist", "notexist", false)
@@ -33,7 +33,7 @@ func TestUpdate_existingFile(t *testing.T) {
 	temp.WriteString("hello")
 	temp.Close()
 
-	var coll = New()
+	var coll = NewCollection()
 	coll.InitEmpty()
 
 	var ret bool

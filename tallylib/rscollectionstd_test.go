@@ -10,7 +10,7 @@ import (
 )
 
 func Test_Update(t *testing.T) {
-	var fixture = New()
+	var fixture = NewCollection()
 	fixture.InitEmpty()
 
 	var now = time.Now()
@@ -26,7 +26,7 @@ func Test_Update(t *testing.T) {
 }
 
 func Test_ByPath_nil(t *testing.T) {
-	var fixture = New()
+	var fixture = NewCollection()
 	fixture.InitEmpty()
 
 	var notExisting = fixture.ByPath("/missing/path")
@@ -37,7 +37,7 @@ func Test_ByPath_nil(t *testing.T) {
 }
 
 func Test_Visit(t *testing.T) {
-	var fixture = New()
+	var fixture = NewCollection()
 	fixture.InitEmpty()
 
 	var now = time.Now()
@@ -138,7 +138,7 @@ func Test_LoadFrom_multipleRecords(t *testing.T) {
 }
 
 func Test_StoreTo_emptyCollection(t *testing.T) {
-	var coll = New()
+	var coll = NewCollection()
 	var buf bytes.Buffer
 	coll.StoreTo(io.Writer(&buf))
 
@@ -147,7 +147,7 @@ func Test_StoreTo_emptyCollection(t *testing.T) {
 }
 
 func Test_StoreTo_oneRecord(t *testing.T) {
-	var coll = New()
+	var coll = NewCollection()
 	coll.InitEmpty()
 	coll.Update("name1", "sha1", 1024, (time.Time{}))
 
@@ -161,7 +161,7 @@ func Test_StoreTo_oneRecord(t *testing.T) {
 }
 
 func Test_StoreTo_multipleRecords(t *testing.T) {
-	var coll = New()
+	var coll = NewCollection()
 	coll.InitEmpty()
 	coll.Update("name1", "sha1", 0, (time.Time{}))
 	coll.Update("name2", "", 0, (time.Time{}))
@@ -194,7 +194,7 @@ func failOnError(t *testing.T, err error) {
 
 func loadCollectionFromString(xml string) (RSCollection, error) {
 	var reader = strings.NewReader(xml)
-	var fixture = New()
+	var fixture = NewCollection()
 	var err = fixture.LoadFrom(reader)
 	return fixture, err
 }

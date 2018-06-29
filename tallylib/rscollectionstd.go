@@ -10,7 +10,7 @@ import (
 
 const xmlHeader = "<!DOCTYPE RsCollection>\n"
 
-func New() RSCollection {
+func NewCollection() RSCollection {
 	var ret = new(collection)
 	return ret
 }
