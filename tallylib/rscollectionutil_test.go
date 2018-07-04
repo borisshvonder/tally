@@ -27,6 +27,7 @@ func TestUpdate_existingFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	var path = temp.Name()
+	var name = "rel:" + path
 	defer os.Remove(path)
 	defer temp.Close()
 
@@ -37,7 +38,7 @@ func TestUpdate_existingFile(t *testing.T) {
 	coll.InitEmpty()
 
 	var ret bool
-	ret, err = updateFile(coll, path, path, false)
+	ret, err = updateFile(coll, name, path, false)
 	if err != nil {
 		t.Log(err)
 		t.Fail()
@@ -46,12 +47,12 @@ func TestUpdate_existingFile(t *testing.T) {
 		t.Log("Failed to update file " + path)
 		t.Fail()
 	}
-	if coll.ByPath(path) == nil {
+	if coll.ByName(name) == nil {
 		t.Log("Collection was not updated for file " + path)
 		t.Fail()
 	}
 
-	ret, err = updateFile(coll, path, path, false)
+	ret, err = updateFile(coll, name, path, false)
 	if err != nil {
 		t.Log(err)
 		t.Fail()
@@ -61,7 +62,7 @@ func TestUpdate_existingFile(t *testing.T) {
 		t.Fail()
 	}
 
-	ret, err = updateFile(coll, path, path, true)
+	ret, err = updateFile(coll, name, path, true)
 	if err != nil {
 		t.Log(err)
 		t.Fail()
@@ -73,7 +74,7 @@ func TestUpdate_existingFile(t *testing.T) {
 
 	ioutil.WriteFile(path, []byte("Hello, again!"), os.ModePerm)
 
-	ret, err = updateFile(coll, path, path, false)
+	ret, err = updateFile(coll, name, path, false)
 	if err != nil {
 		t.Log(err)
 		t.Fail()

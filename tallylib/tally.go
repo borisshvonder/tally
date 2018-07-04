@@ -4,6 +4,22 @@ import (
 	"io"
 )
 
+// Facade interface for the library
+type Tally interface {
+	GetConfig() TallyConfig
+	SetConfig(cfg TallyConfig)
+
+	// Where to log stuff, by default don't write anywhere
+	SetLog(log io.Writer)
+
+	// returns true if made any changes or false if no changes done
+	UpdateSingleDirectory(directory string) (bool, error)
+
+	// Update all subdirectories and all parent directories (if any)
+	// returns true if made any changes or false if no changes done
+	UpdateRecursive(directory string) (bool, error)
+}
+
 type TallyConfig struct {
 	forceUpdate bool
 
@@ -19,21 +35,6 @@ type TallyConfig struct {
 	//   4 - warnings + errors + info + debug
 	// more - increase logging more and more
 	logVerbosity int
-}
-
-type Tally interface {
-	GetConfig() TallyConfig
-	SetConfig(cfg TallyConfig)
-
-	// Where to log stuff, by default don't write anywhere
-	SetLog(log io.Writer)
-
-	// returns true if made any changes or false if no changes done
-	UpdateSingleDirectory(directory string) (bool, error)
-
-	// Update all subdirectories and all parent directories (if any)
-	// returns true if made any changes or false if no changes done
-	UpdateRecursive(directory string) (bool, error)
 }
 
 type CollectionFileAccessError struct {

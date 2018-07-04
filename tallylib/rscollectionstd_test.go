@@ -14,24 +14,24 @@ func Test_Update(t *testing.T) {
 	fixture.InitEmpty()
 
 	var now = time.Now()
-	var path = "relative/path"
+	var name = "relative/path"
 	var size int64 = 1234
 	var sha1 = "sha1"
 
-	var file = fixture.Update(path, sha1, size, now)
-	assertFile(t, file, path, sha1, size, now)
+	var file = fixture.Update(name, sha1, size, now)
+	assertFile(t, file, name, sha1, size, now)
 
-	var fileByPath = fixture.ByPath(path)
-	assertFile(t, fileByPath, path, sha1, size, now)
+	var fileByName = fixture.ByName(name)
+	assertFile(t, fileByName, name, sha1, size, now)
 }
 
-func Test_ByPath_nil(t *testing.T) {
+func Test_ByName_nil(t *testing.T) {
 	var fixture = NewCollection()
 	fixture.InitEmpty()
 
-	var notExisting = fixture.ByPath("/missing/path")
+	var notExisting = fixture.ByName("missing/path")
 	if notExisting != nil {
-		t.Log("Expected nil, got " + notExisting.Path())
+		t.Log("Expected nil, got " + notExisting.Name())
 		t.Fail()
 	}
 }
@@ -41,11 +41,11 @@ func Test_Visit(t *testing.T) {
 	fixture.InitEmpty()
 
 	var now = time.Now()
-	var path = "relative/path"
+	var name = "relative/path"
 	var size int64 = 12345
 	var sha1 = "sha1"
 
-	fixture.Update(path, sha1, size, now)
+	fixture.Update(name, sha1, size, now)
 
 	var files [1]RSCollectionFile
 	var i = 0
@@ -58,7 +58,7 @@ func Test_Visit(t *testing.T) {
 		t.Log("got " + strconv.Itoa(i) + " files")
 		t.Fail()
 	}
-	assertFile(t, files[0], path, sha1, size, now)
+	assertFile(t, files[0], name, sha1, size, now)
 }
 
 func Test_LoadFrom_empty_xml(t *testing.T) {
@@ -99,7 +99,7 @@ func Test_LoadFrom_oneRecord(t *testing.T) {
 	if err != nil {
 		failOnError(t, err)
 	} else {
-		var file = fixture.ByPath("name1")
+		var file = fixture.ByName("name1")
 
 		var expectedTimestamp, err = time.Parse(time.RFC3339,
 			"2018-02-28T18:30:01.123Z")
@@ -127,11 +127,11 @@ func Test_LoadFrom_multipleRecords(t *testing.T) {
 	if err != nil {
 		failOnError(t, err)
 	} else {
-		assertFile(t, fixture.ByPath("name1"), "name1",
+		assertFile(t, fixture.ByName("name1"), "name1",
 			"8551d11f6e8d3ec2731f70a2573b887637e94559",
 			1024, (time.Time{}))
 
-		assertFile(t, fixture.ByPath("name2"), "name2",
+		assertFile(t, fixture.ByName("name2"), "name2",
 			"6551d11f6e8d3ec2731f70a2573b887637e94559",
 			0, (time.Time{}))
 	}
@@ -201,13 +201,13 @@ func loadCollectionFromString(xml string) (RSCollection, error) {
 
 func assertEmptyCollection(t *testing.T, fixture RSCollection) {
 	fixture.Visit(func(file RSCollectionFile) {
-		t.Log("Error: collection contains file " + file.Path())
+		t.Log("Error: collection contains file " + file.Name())
 		t.Fail()
 	})
 }
 
-func assertFile(t *testing.T, file RSCollectionFile, path, sha1 string, size int64, timestamp time.Time) {
-	assertStrEquals(t, "file.Path()", path, file.Path())
+func assertFile(t *testing.T, file RSCollectionFile, name, sha1 string, size int64, timestamp time.Time) {
+	assertStrEquals(t, "file.Name()", name, file.Name())
 	assertStrEquals(t, "file.Sha1()", sha1, file.Sha1())
 	assertUint64Equals(t, "file.Size()", size, file.Size())
 	assertTimeEquals(t, "file.Timestamp()", timestamp, file.Timestamp())

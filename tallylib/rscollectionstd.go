@@ -20,7 +20,7 @@ type collection struct {
 }
 
 type file struct {
-	path      string
+	name      string
 	sha1      string
 	size      int64
 	timestamp time.Time
@@ -30,14 +30,14 @@ func (coll *collection) InitEmpty() {
 	coll.files = make(map[string]RSCollectionFile)
 }
 
-func (coll *collection) Update(path, sha1 string, size int64, timestamp time.Time) RSCollectionFile {
+func (coll *collection) Update(name, sha1 string, size int64, timestamp time.Time) RSCollectionFile {
 	var file = new(file)
-	file.path = path
+	file.name = name
 	file.sha1 = sha1
 	file.size = size
 	file.timestamp = timestamp
 
-	coll.files[path] = file
+	coll.files[name] = file
 
 	return file
 }
@@ -48,8 +48,8 @@ func (coll *collection) Visit(cb func(RSCollectionFile)) {
 	}
 }
 
-func (coll *collection) ByPath(path string) RSCollectionFile {
-	return coll.files[path]
+func (coll *collection) ByName(name string) RSCollectionFile {
+	return coll.files[name]
 }
 
 type XmlRsCollection struct {
@@ -84,7 +84,7 @@ func (coll *collection) LoadFrom(in io.Reader) error {
 		if err != nil {
 			errs += err.Error() + " "
 		}
-		coll.files[file.path] = file
+		coll.files[file.name] = file
 	}
 
 	if errs != "" {
@@ -118,7 +118,7 @@ func (coll *collection) StoreTo(out io.Writer) error {
 
 func xmlFileToStd(xmlFile *XmlFile) (*file, error) {
 	var ret = new(file)
-	ret.path = xmlFile.Name
+	ret.name = xmlFile.Name
 	ret.sha1 = xmlFile.Sha1
 	ret.size = xmlFile.Size
 	var err error
@@ -133,7 +133,7 @@ func xmlFileToStd(xmlFile *XmlFile) (*file, error) {
 
 func stdFileToXml(file RSCollectionFile) *XmlFile {
 	var ret = new(XmlFile)
-	ret.Name = file.Path()
+	ret.Name = file.Name()
 	ret.Sha1 = file.Sha1()
 	ret.Size = file.Size()
 	var timestamp = file.Timestamp()
@@ -143,8 +143,8 @@ func stdFileToXml(file RSCollectionFile) *XmlFile {
 	return ret
 }
 
-func (file *file) Path() string {
-	return file.path
+func (file *file) Name() string {
+	return file.name
 }
 
 func (file *file) Sha1() string {
