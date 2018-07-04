@@ -38,28 +38,40 @@ func (tally *tally) SetLog(logfile io.Writer) {
 	tally.initLog()
 }
 
-func (tally *tally) UpdateSingleDirectory(directory string) error {
+func (tally *tally) UpdateSingleDirectory(directory string) (bool, error) {
 	var collectionFile = directory + ".rscollection"
 
 	var coll, err = tally.loadExistingCollection(collectionFile)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	var files []os.FileInfo
 	files, err = ioutil.ReadDir(directory)
+	var ret = false
 
 	for _, file := range files {
 		if !file.IsDir() {
 			var fullpath = filepath.Join(directory, file.Name())
+			var changed bool
 
-			// TODO: move to tally
-			UpdateFile(coll, fullpath, file.Name(),
+			changed, err = updateFile(coll, fullpath, file.Name(),
 				tally.config.forceUpdate)
+
+			ret = changed || ret
+
+			if err != nil {
+				// Failure to update single file is not critical
+				tally.warn("Could not update ", fullpath, err)
+				if tally.config.stopOnWarnings {
+					tally.warn("Stopping on warning")
+					return ret, err
+				}
+			}
 		}
 	}
 
-	return nil
+	return ret, nil
 }
 
 func (tally *tally) loadExistingCollection(fromFile string) (RSCollection,
@@ -128,8 +140,8 @@ func (tally *tally) collectionFileError(filepath string, message string,
 	return ret
 }
 
-func (tally *tally) UpdateRecursive(directory string) error {
-	return nil
+func (tally *tally) UpdateRecursive(directory string) (bool, error) {
+	panic("NIY")
 }
 
 func (tally *tally) initLog() {

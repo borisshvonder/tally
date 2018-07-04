@@ -10,7 +10,7 @@ func TestUpdateFile_file_does_not_exist(t *testing.T) {
 	var coll = NewCollection()
 	coll.InitEmpty()
 
-	var ret, err = UpdateFile(coll, "/path/does/notexist", "notexist", false)
+	var ret, err = updateFile(coll, "/path/does/notexist", "notexist", false)
 	if err == nil {
 		t.Log("Should fail on file that does not exist")
 		t.Fail()
@@ -37,7 +37,7 @@ func TestUpdate_existingFile(t *testing.T) {
 	coll.InitEmpty()
 
 	var ret bool
-	ret, err = UpdateFile(coll, path, path, false)
+	ret, err = updateFile(coll, path, path, false)
 	if err != nil {
 		t.Log(err)
 		t.Fail()
@@ -51,7 +51,7 @@ func TestUpdate_existingFile(t *testing.T) {
 		t.Fail()
 	}
 
-	ret, err = UpdateFile(coll, path, path, false)
+	ret, err = updateFile(coll, path, path, false)
 	if err != nil {
 		t.Log(err)
 		t.Fail()
@@ -61,7 +61,7 @@ func TestUpdate_existingFile(t *testing.T) {
 		t.Fail()
 	}
 
-	ret, err = UpdateFile(coll, path, path, true)
+	ret, err = updateFile(coll, path, path, true)
 	if err != nil {
 		t.Log(err)
 		t.Fail()
@@ -73,7 +73,7 @@ func TestUpdate_existingFile(t *testing.T) {
 
 	ioutil.WriteFile(path, []byte("Hello, again!"), os.ModePerm)
 
-	ret, err = UpdateFile(coll, path, path, false)
+	ret, err = updateFile(coll, path, path, false)
 	if err != nil {
 		t.Log(err)
 		t.Fail()

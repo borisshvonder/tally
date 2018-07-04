@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-func UpdateFile(coll RSCollection, filename string, path string, force bool) (bool, error) {
+func updateFile(coll RSCollection, filename string, path string, force bool) (bool, error) {
 	var existing RSCollectionFile = nil
 	if !force {
 		existing = coll.ByPath(filename)
