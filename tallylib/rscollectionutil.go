@@ -31,9 +31,7 @@ func updateFile(coll RSCollection, filename string, path string, force bool) (bo
 
 		var sha1sum = hex.EncodeToString(digest.Sum(nil))
 		if existing == nil || existing.Sha1() != sha1sum {
-			coll.Update(filename, sha1sum, stat.Size(),
-				stat.ModTime())
-
+			coll.Update(filename, sha1sum, stat.Size(), stat.ModTime())
 			return true, nil
 		}
 	}

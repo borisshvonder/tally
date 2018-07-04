@@ -206,22 +206,14 @@ func assertEmptyCollection(t *testing.T, fixture RSCollection) {
 	})
 }
 
-func assertFile(
-	t *testing.T,
-	file RSCollectionFile,
-	path string,
-	sha1 string,
-	size int64,
-	timestamp time.Time) {
-
+func assertFile(t *testing.T, file RSCollectionFile, path, sha1 string, size int64, timestamp time.Time) {
 	assertStrEquals(t, "file.Path()", path, file.Path())
 	assertStrEquals(t, "file.Sha1()", sha1, file.Sha1())
 	assertUint64Equals(t, "file.Size()", size, file.Size())
 	assertTimeEquals(t, "file.Timestamp()", timestamp, file.Timestamp())
 }
 
-func assertStrEquals(t *testing.T, context string, expected string,
-	actual string) {
+func assertStrEquals(t *testing.T, context, expected, actual string) {
 
 	if expected != actual {
 		t.Log(context + ": expected '" + expected +
@@ -230,9 +222,7 @@ func assertStrEquals(t *testing.T, context string, expected string,
 	}
 }
 
-func assertIntEquals(t *testing.T, context string, expected int,
-	actual int) {
-
+func assertIntEquals(t *testing.T, context string, expected, actual int) {
 	if expected != actual {
 		t.Log(context + ": expected '" +
 			strconv.Itoa(expected) +
@@ -243,9 +233,7 @@ func assertIntEquals(t *testing.T, context string, expected int,
 	}
 }
 
-func assertUint64Equals(t *testing.T, context string, expected int64,
-	actual int64) {
-
+func assertUint64Equals(t *testing.T, context string, expected, actual int64) {
 	if expected != actual {
 		t.Log(context + ": expected '" +
 			strconv.FormatInt(expected, 10) +
@@ -256,9 +244,7 @@ func assertUint64Equals(t *testing.T, context string, expected int64,
 	}
 }
 
-func assertTimeEquals(t *testing.T, context string, expected time.Time,
-	actual time.Time) {
-
+func assertTimeEquals(t *testing.T, context string, expected, actual time.Time) {
 	if expected != actual {
 		t.Log(context + ": expected '" + expected.String() +
 			"', actual '" + actual.String() + "'")

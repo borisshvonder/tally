@@ -30,12 +30,7 @@ func (coll *collection) InitEmpty() {
 	coll.files = make(map[string]RSCollectionFile)
 }
 
-func (coll *collection) Update(
-	path string,
-	sha1 string,
-	size int64,
-	timestamp time.Time) RSCollectionFile {
-
+func (coll *collection) Update(path, sha1 string, size int64, timestamp time.Time) RSCollectionFile {
 	var file = new(file)
 	file.path = path
 	file.sha1 = sha1
