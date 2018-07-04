@@ -6,11 +6,12 @@ import (
 
 // Facade interface for the library
 type Tally interface {
+	// Get current configuration (default config if haven't ever called
+	// SetConfig)
 	GetConfig() TallyConfig
-	SetConfig(cfg TallyConfig)
 
-	// Where to log stuff, by default don't write anywhere
-	SetLog(log io.Writer)
+	// Set new configuration
+	SetConfig(cfg TallyConfig)
 
 	// returns true if made any changes or false if no changes done
 	UpdateSingleDirectory(directory string) (bool, error)
@@ -18,6 +19,9 @@ type Tally interface {
 	// Update all subdirectories and all parent directories (if any)
 	// returns true if made any changes or false if no changes done
 	UpdateRecursive(directory string) (bool, error)
+
+	// Where to log stuff, by default don't write anywhere
+	SetLog(log io.Writer)
 }
 
 type TallyConfig struct {
