@@ -39,12 +39,18 @@ func (tally *tally) SetLog(logfile io.Writer) {
 }
 
 func (tally *tally) UpdateSingleDirectory(directory string) (bool, error) {
+	// In order to remove files which no longer exists from the collection,
+	// we use 2 collections here: oldColl and newColl. This is actually
+	// does not consume too much memory since collections store interfaces
+	// (pointers) to real data. Regardless, the data is very small anyway
 	var collectionFile = directory + ".rscollection"
-
-	var coll, err = tally.loadExistingCollection(collectionFile)
+	var oldColl, err = tally.loadExistingCollection(collectionFile)
 	if err != nil {
 		return false, err
 	}
+
+	var newColl = NewCollection()
+	newColl.InitEmpty()
 
 	var files []os.FileInfo
 	files, err = ioutil.ReadDir(directory)
@@ -53,7 +59,12 @@ func (tally *tally) UpdateSingleDirectory(directory string) (bool, error) {
 	for _, file := range files {
 		if !file.IsDir() {
 			var changed bool
-			changed, err = tally.updateFile(directory, file.Name(), coll)
+			var name = file.Name()
+			var oldFile = oldColl.ByName(name)
+			if oldFile != nil {
+				newColl.UpdateFile(oldFile)
+			}
+			changed, err = tally.updateFile(directory, name, newColl)
 			ret = changed || ret
 			if err != nil {
 				return ret, err
@@ -61,7 +72,12 @@ func (tally *tally) UpdateSingleDirectory(directory string) (bool, error) {
 		}
 	}
 
-	return ret, nil
+	if ret {
+		// Collection has been modified, need to write it back
+		err = tally.storeCollectionToFile(newColl, collectionFile)
+	}
+
+	return ret, err
 }
 
 func (tally *tally) updateFile(directory, filename string, coll RSCollection) (bool, error) {
@@ -78,6 +94,22 @@ func (tally *tally) updateFile(directory, filename string, coll RSCollection) (b
 	}
 
 	return ret, nil
+}
+
+func (tally *tally) storeCollectionToFile(coll RSCollection, fileTo string) error {
+	var file, err = os.Open(fileTo)
+	if err != nil {
+		return tally.collectionFileError(fileTo, "Cannot open for writing", err)
+	}
+	err = coll.StoreTo(file)
+	var closeErr = file.Close()
+	if err != nil {
+		return tally.collectionFileError(fileTo, "Cannot save", err)
+	}
+	if closeErr != nil {
+		return tally.collectionFileError(fileTo, "Cannot close file", closeErr)
+	}
+	return nil
 }
 
 func (tally *tally) loadExistingCollection(fromFile string) (RSCollection, error) {
