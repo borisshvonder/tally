@@ -42,6 +42,10 @@ func (coll *collection) Update(name, sha1 string, size int64, timestamp time.Tim
 	return file
 }
 
+func (coll *collection) UpdateFile(file RSCollectionFile) {
+	coll.files[file.Name()] = file
+}
+
 func (coll *collection) Visit(cb func(RSCollectionFile)) {
 	for _, v := range coll.files {
 		cb(v)

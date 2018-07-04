@@ -25,6 +25,25 @@ func Test_Update(t *testing.T) {
 	assertFile(t, fileByName, name, sha1, size, now)
 }
 
+func Test_UpdateFile(t *testing.T) {
+	var source = NewCollection()
+	source.InitEmpty()
+
+	var now = time.Now()
+	var name = "relative/path"
+	var size int64 = 1234
+	var sha1 = "sha1"
+
+	var file = source.Update(name, sha1, size, now)
+
+	var fixture = NewCollection()
+	fixture.InitEmpty()
+
+	fixture.UpdateFile(file)
+	file = fixture.ByName(name)
+	assertFile(t, file, name, sha1, size, now)
+}
+
 func Test_ByName_nil(t *testing.T) {
 	var fixture = NewCollection()
 	fixture.InitEmpty()
