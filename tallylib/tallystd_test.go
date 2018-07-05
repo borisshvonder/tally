@@ -8,12 +8,22 @@ import (
 	"time"
 )
 
+func Test_resolveCollectionFileForDirectory(t *testing.T) {
+	assertStringEquals(t, "dir.rscollection", resolveCollectionFileForDirectory("dir"))
+	assertStringEquals(t, "dir.rscollection", resolveCollectionFileForDirectory("dir/"))
+	assertStringEquals(t, "parent/dir.rscollection", resolveCollectionFileForDirectory("parent/dir"))
+	assertStringEquals(t, "/parent/dir.rscollection", resolveCollectionFileForDirectory("/parent/dir"))
+	assertStringEquals(t, "/parent/dir.rscollection", resolveCollectionFileForDirectory("/parent/dir/"))
+	assertStringEquals(t, ".rscollection", resolveCollectionFileForDirectory(""))
+	assertStringEquals(t, "/.rscollection", resolveCollectionFileForDirectory("/"))
+}
+
 func Test_UpdateSingleDirectory_1_file(t *testing.T) {
 	fixture := createFixture()
 	tmpdir := mktmp("Test_UpdateSingleDirectory_1_file")
 	defer os.RemoveAll(tmpdir)
 
-	subdir := mkdir(tmpdir, "subdir")
+	subdir := mkdir(tmpdir, "subdir") + "/"
 	writefile(subdir, "file1", "Hello, world!")
 
 	var coll = assertUpdateSingleDirectory(t, fixture, subdir)
@@ -98,12 +108,6 @@ func loadCollectionForDirectory(t *testing.T, directory string) RSCollection {
 	return loadCollection(t, collectionFile)
 }
 
-func resolveCollectionFileForDirectory(directory string) string {
-	parent := filepath.Dir(directory)
-	name := filepath.Base(directory)
-	return filepath.Join(parent, name+".rscollection")
-}
-
 func loadCollection(t *testing.T, filepath string) RSCollection {
 	var coll = NewCollection()
 	collFile, err := os.Open(filepath)
@@ -162,5 +166,12 @@ func getTimestampSafe(filepath string) time.Time {
 		return time.Time{}
 	} else {
 		return stat.ModTime()
+	}
+}
+
+func assertStringEquals(t *testing.T, expected, actual string) {
+	if expected != actual {
+		t.Log("Expected:", expected, "actual:", actual)
+		t.Fail()
 	}
 }

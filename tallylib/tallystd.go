@@ -43,7 +43,7 @@ func (tally *tally) UpdateSingleDirectory(directory string) (bool, error) {
 	// we use 2 collections here: oldColl and newColl. This is actually
 	// does not consume too much memory since collections store interfaces
 	// (pointers) to real data. Regardless, the data is very small anyway
-	var collectionFile = directory + ".rscollection"
+	var collectionFile = resolveCollectionFileForDirectory(directory)
 	tally.debug("Using collection file ", collectionFile)
 	var oldColl, err = tally.loadExistingCollection(collectionFile)
 	if err != nil {
@@ -219,8 +219,17 @@ func (tally *tally) info(v ...interface{}) {
 		tally.loggerInfo.Println(v)
 	}
 }
+
 func (tally *tally) debug(v ...interface{}) {
 	if tally.config.logVerbosity >= 4 {
 		tally.loggerDebug.Println(v)
 	}
+}
+
+func resolveCollectionFileForDirectory(directory string) string {
+	dir, file := filepath.Split(filepath.Clean(directory))
+	if file == "." {
+		file = ""
+	}
+	return filepath.Join(dir, file+".rscollection")
 }
