@@ -44,22 +44,33 @@ func (tally *tally) UpdateSingleDirectory(directory string) (bool, error) {
 	// does not consume too much memory since collections store interfaces
 	// (pointers) to real data. Regardless, the data is very small anyway
 	var collectionFile = directory + ".rscollection"
+	tally.debug("Using collection file ", collectionFile)
 	var oldColl, err = tally.loadExistingCollection(collectionFile)
 	if err != nil {
+		tally.debug("Error loading from ", collectionFile, err)
 		return false, err
 	}
 
 	var newColl = NewCollection()
 	newColl.InitEmpty()
 
+	tally.debug("Listing files in directory ", directory)
 	var files []os.FileInfo
 	files, err = ioutil.ReadDir(directory)
+	if err != nil {
+		return false, err
+	}
+	tally.debug("Got", len(files), "entries")
 	var ret = false
 
 	for _, file := range files {
-		if !file.IsDir() {
+		if file.IsDir() {
+			tally.debug("Skipping", file.Name(), "because it is a directory")
+		} else {
 			var changed bool
 			var name = file.Name()
+			tally.debug("Working on file ", name)
+
 			var oldFile = oldColl.ByName(name)
 			if oldFile != nil {
 				newColl.UpdateFile(oldFile)
@@ -81,12 +92,13 @@ func (tally *tally) UpdateSingleDirectory(directory string) (bool, error) {
 }
 
 func (tally *tally) updateFile(directory, filename string, coll RSCollection) (bool, error) {
+	tally.debug("Checking file", filename, "in directory", directory)
 	var fullpath = filepath.Join(directory, filename)
-	var ret, err = updateFile(coll, fullpath, filename, tally.config.forceUpdate)
+	var ret, err = updateFile(coll, filename, fullpath, tally.config.forceUpdate)
 
 	if err != nil {
 		// Failure to update single file is not critical
-		tally.warn("Could not update ", fullpath, err)
+		tally.warn("Could not update", fullpath, err)
 		if tally.config.stopOnWarnings {
 			tally.warn("Stopping on warning")
 			return ret, err
@@ -97,7 +109,7 @@ func (tally *tally) updateFile(directory, filename string, coll RSCollection) (b
 }
 
 func (tally *tally) storeCollectionToFile(coll RSCollection, fileTo string) error {
-	var file, err = os.Open(fileTo)
+	var file, err = os.Create(fileTo)
 	if err != nil {
 		return tally.collectionFileError(fileTo, "Cannot open for writing", err)
 	}
@@ -109,41 +121,58 @@ func (tally *tally) storeCollectionToFile(coll RSCollection, fileTo string) erro
 	if closeErr != nil {
 		return tally.collectionFileError(fileTo, "Cannot close file", closeErr)
 	}
+	tally.debug("Successfully saved collection to ", fileTo)
 	return nil
 }
 
 func (tally *tally) loadExistingCollection(fromFile string) (RSCollection, error) {
 	var stat, err = os.Stat(fromFile)
+	var fileExists bool
 
-	if err != nil && os.IsNotExist(err) {
-		return nil, tally.collectionFileError(fromFile, "Cannot stat", err)
-	} else if err == nil {
+	if err != nil {
+		tally.debug("Got error from os.Stat(", fromFile, "): ", err)
+		if !os.IsNotExist(err) {
+			tally.debug("The previous error does not mean file non-existing. Must be some other problem, reporting error")
+			return nil, tally.collectionFileError(fromFile, "Cannot stat", err)
+		} else {
+			tally.debug("The previous error means file does not exist, that is Ok")
+			fileExists = false
+		}
+	} else {
 		if stat.IsDir() {
+			tally.debug("Path ", fromFile, " is a directory, failing")
 			return nil, tally.collectionFileError(fromFile, "File is DIRECTORY and cannot be written to", nil)
 		}
+		fileExists = true
 	}
 
-	var file *os.File
-	file, err = os.Open(fromFile)
-	if err != nil {
-		return nil, tally.collectionFileError(fromFile, "Cannot open", err)
-	}
 	var coll = NewCollection()
-	err = coll.LoadFrom(file)
-	var closeErr = file.Close()
-	if err != nil {
-		tally.warn("Cannot load file", fromFile)
-		if tally.config.stopOnWarnings {
-			tally.err("Stopping on warning")
-			return nil, tally.collectionFileError(fromFile, "Load error", err)
-		} else {
-			tally.warn("Using empty collection (will rehash files)")
-			coll.InitEmpty()
+	if fileExists {
+		var file *os.File
+		file, err = os.Open(fromFile)
+		if err != nil {
+			return nil, tally.collectionFileError(fromFile, "Cannot open", err)
 		}
+		err = coll.LoadFrom(file)
+		var closeErr = file.Close()
+		if err != nil {
+			tally.warn("Cannot load file", fromFile)
+			if tally.config.stopOnWarnings {
+				tally.err("Stopping on warning")
+				return nil, tally.collectionFileError(fromFile, "Load error", err)
+			} else {
+				tally.warn("Using empty collection (will rehash files)")
+				coll.InitEmpty()
+			}
 
-	}
-	if closeErr != nil {
-		return nil, tally.collectionFileError(fromFile, "Cannot close", err)
+		}
+		if closeErr != nil {
+			return nil, tally.collectionFileError(fromFile, "Cannot close", err)
+		}
+		tally.debug("Successfully loaded RSCollection from ", fromFile)
+	} else {
+		tally.debug("Initializing empty collection since file does not exist")
+		coll.InitEmpty()
 	}
 	return coll, nil
 }
@@ -167,10 +196,10 @@ func (tally *tally) UpdateRecursive(directory string) (bool, error) {
 }
 
 func (tally *tally) initLog() {
-	tally.loggerDebug = log.New(tally.log, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
-	tally.loggerInfo = log.New(tally.log, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	tally.loggerWarn = log.New(tally.log, "WARN: ", log.Ldate|log.Ltime|log.Lshortfile)
-	tally.loggerErr = log.New(tally.log, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
+	tally.loggerDebug = log.New(tally.log, "DEBUG: ", log.Ldate|log.Ltime)
+	tally.loggerInfo = log.New(tally.log, "INFO: ", log.Ldate|log.Ltime)
+	tally.loggerWarn = log.New(tally.log, "WARN: ", log.Ldate|log.Ltime)
+	tally.loggerErr = log.New(tally.log, "ERROR: ", log.Ldate|log.Ltime)
 }
 
 func (tally *tally) err(v ...interface{}) {
@@ -192,6 +221,6 @@ func (tally *tally) info(v ...interface{}) {
 }
 func (tally *tally) debug(v ...interface{}) {
 	if tally.config.logVerbosity >= 4 {
-		tally.loggerErr.Println(v)
+		tally.loggerDebug.Println(v)
 	}
 }
