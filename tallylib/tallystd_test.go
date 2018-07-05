@@ -8,47 +8,51 @@ import (
 	"time"
 )
 
-func Test_resolveCollectionFileForDirectory(t *testing.T) {
-	assertStringEquals(t, "dir.rscollection", resolveCollectionFileForDirectory("dir"))
-	assertStringEquals(t, "dir.rscollection", resolveCollectionFileForDirectory("dir/"))
-	assertStringEquals(t, "parent/dir.rscollection", resolveCollectionFileForDirectory("parent/dir"))
-	assertStringEquals(t, "/parent/dir.rscollection", resolveCollectionFileForDirectory("/parent/dir"))
-	assertStringEquals(t, "/parent/dir.rscollection", resolveCollectionFileForDirectory("/parent/dir/"))
-	assertStringEquals(t, ".rscollection", resolveCollectionFileForDirectory(""))
-	assertStringEquals(t, "/.rscollection", resolveCollectionFileForDirectory("/"))
+func createFixture() Tally {
+	fixture := NewTally()
+	// Uncomment to enable logging:
+	//fixture.SetLog(os.Stdout)
+	var config TallyConfig
+	config.logVerbosity = 100
+	fixture.SetConfig(config)
+	return fixture
 }
 
-func Test_UpdateSingleDirectory_1_file(t *testing.T) {
+func Test_UpdateSingleDirectory(t *testing.T) {
 	fixture := createFixture()
 	tmpdir := mktmp("Test_UpdateSingleDirectory_1_file")
 	defer os.RemoveAll(tmpdir)
 
-	subdir := mkdir(tmpdir, "subdir") + "/"
+	subdir := mkdir(tmpdir, "subdir")
 	writefile(subdir, "file1", "Hello, world!")
-
 	var coll = assertUpdateSingleDirectory(t, fixture, subdir)
 	assertFileInCollection(t, coll, "file1", "943a702d06f34599aee1f8da8ef9f7296031d699")
 	assertCollectionSize(t, 1, coll)
-
+	mkdir(subdir, "this-should-be-ignored")
 	assertWillNotUpdateSingleDirectory(t, fixture, subdir)
-}
 
-func Test_UpdateSingleDirectory_2_files(t *testing.T) {
-	fixture := createFixture()
-	tmpdir := mktmp("Test_UpdateSingleDirectory_2_files")
-	defer os.RemoveAll(tmpdir)
-
-	subdir1 := mkdir(tmpdir, "subdir1")
-	writefile(subdir1, "file1", "Hello, world!")
-	writefile(subdir1, "file2", "Hello again")
-	mkdir(subdir1, "subdir2")
-
-	var coll = assertUpdateSingleDirectory(t, fixture, subdir1)
+	writefile(subdir, "file2", "Hello again")
+	coll = assertUpdateSingleDirectory(t, fixture, subdir)
 	assertFileInCollection(t, coll, "file1", "943a702d06f34599aee1f8da8ef9f7296031d699")
 	assertFileInCollection(t, coll, "file2", "43ce0c8e7e28680735241ad3e5550aa361b96f53")
 	assertCollectionSize(t, 2, coll)
+	assertWillNotUpdateSingleDirectory(t, fixture, subdir)
 
-	assertWillNotUpdateSingleDirectory(t, fixture, subdir1)
+	writefile(subdir, "file3", "And again")
+	coll = assertUpdateSingleDirectory(t, fixture, subdir)
+	assertFileInCollection(t, coll, "file1", "943a702d06f34599aee1f8da8ef9f7296031d699")
+	assertFileInCollection(t, coll, "file2", "43ce0c8e7e28680735241ad3e5550aa361b96f53")
+	assertFileInCollection(t, coll, "file3", "b32642de88c24a48f9de7f76698eb7a9a65dae58")
+	assertCollectionSize(t, 3, coll)
+	assertWillNotUpdateSingleDirectory(t, fixture, subdir)
+
+	writefile(subdir, "file1", "Change contents")
+	coll = assertUpdateSingleDirectory(t, fixture, subdir)
+	assertFileInCollection(t, coll, "file1", "8804b55dbfd918a5bd47cf31e8f5ec8ccae6abb7")
+	assertFileInCollection(t, coll, "file2", "43ce0c8e7e28680735241ad3e5550aa361b96f53")
+	assertFileInCollection(t, coll, "file3", "b32642de88c24a48f9de7f76698eb7a9a65dae58")
+	assertCollectionSize(t, 3, coll)
+	assertWillNotUpdateSingleDirectory(t, fixture, subdir)
 }
 
 func assertCollectionSize(t *testing.T, expected int, coll RSCollection) {
@@ -124,16 +128,6 @@ func loadCollection(t *testing.T, filepath string) RSCollection {
 	return coll
 }
 
-func createFixture() Tally {
-	fixture := NewTally()
-	// Uncomment to enable logging:
-	fixture.SetLog(os.Stdout)
-	var config TallyConfig
-	config.logVerbosity = 100
-	fixture.SetConfig(config)
-	return fixture
-}
-
 func mktmp(prefix string) string {
 	tmpdir, err := ioutil.TempDir("", prefix)
 	if err != nil {
@@ -174,4 +168,14 @@ func assertStringEquals(t *testing.T, expected, actual string) {
 		t.Log("Expected:", expected, "actual:", actual)
 		t.Fail()
 	}
+}
+
+func Test_resolveCollectionFileForDirectory(t *testing.T) {
+	assertStringEquals(t, "dir.rscollection", resolveCollectionFileForDirectory("dir"))
+	assertStringEquals(t, "dir.rscollection", resolveCollectionFileForDirectory("dir/"))
+	assertStringEquals(t, "parent/dir.rscollection", resolveCollectionFileForDirectory("parent/dir"))
+	assertStringEquals(t, "/parent/dir.rscollection", resolveCollectionFileForDirectory("/parent/dir"))
+	assertStringEquals(t, "/parent/dir.rscollection", resolveCollectionFileForDirectory("/parent/dir/"))
+	assertStringEquals(t, ".rscollection", resolveCollectionFileForDirectory(""))
+	assertStringEquals(t, "/.rscollection", resolveCollectionFileForDirectory("/"))
 }
