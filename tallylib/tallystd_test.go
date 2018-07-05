@@ -20,7 +20,7 @@ func createFixture() Tally {
 
 func Test_UpdateSingleDirectory(t *testing.T) {
 	fixture := createFixture()
-	tmpdir := mktmp("Test_UpdateSingleDirectory_1_file")
+	tmpdir := mktmp("Test_UpdateSingleDirectory")
 	defer os.RemoveAll(tmpdir)
 
 	subdir := mkdir(tmpdir, "subdir")
@@ -47,6 +47,14 @@ func Test_UpdateSingleDirectory(t *testing.T) {
 	assertWillNotUpdateSingleDirectory(t, fixture, subdir)
 
 	writefile(subdir, "file1", "Change contents")
+	coll = assertUpdateSingleDirectory(t, fixture, subdir)
+	assertFileInCollection(t, coll, "file1", "8804b55dbfd918a5bd47cf31e8f5ec8ccae6abb7")
+	assertFileInCollection(t, coll, "file2", "43ce0c8e7e28680735241ad3e5550aa361b96f53")
+	assertFileInCollection(t, coll, "file3", "b32642de88c24a48f9de7f76698eb7a9a65dae58")
+	assertCollectionSize(t, 3, coll)
+	assertWillNotUpdateSingleDirectory(t, fixture, subdir)
+
+	writefile(tmpdir, "subdir.rscollection", "badxml")
 	coll = assertUpdateSingleDirectory(t, fixture, subdir)
 	assertFileInCollection(t, coll, "file1", "8804b55dbfd918a5bd47cf31e8f5ec8ccae6abb7")
 	assertFileInCollection(t, coll, "file2", "43ce0c8e7e28680735241ad3e5550aa361b96f53")
