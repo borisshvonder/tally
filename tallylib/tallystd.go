@@ -72,6 +72,8 @@ func (tally *tally) UpdateSingleDirectory(directory string) (bool, error) {
 			tally.debug("Working on file ", name)
 
 			var oldFile = oldColl.ByName(name)
+			oldColl.RemoveFile(name)
+
 			if oldFile != nil {
 				newColl.UpdateFile(oldFile)
 			}
@@ -82,6 +84,9 @@ func (tally *tally) UpdateSingleDirectory(directory string) (bool, error) {
 			}
 		}
 	}
+
+	// files left in old collection means files were removed from disk
+	ret = ret || oldColl.Size() > 0
 
 	if ret {
 		// Collection has been modified, need to write it back

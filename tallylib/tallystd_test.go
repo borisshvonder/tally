@@ -61,6 +61,13 @@ func Test_UpdateSingleDirectory(t *testing.T) {
 	assertFileInCollection(t, coll, "file3", "b32642de88c24a48f9de7f76698eb7a9a65dae58")
 	assertCollectionSize(t, 3, coll)
 	assertWillNotUpdateSingleDirectory(t, fixture, subdir)
+
+	os.Remove(filepath.Join(subdir, "file2"))
+	coll = assertUpdateSingleDirectory(t, fixture, subdir)
+	assertFileInCollection(t, coll, "file1", "8804b55dbfd918a5bd47cf31e8f5ec8ccae6abb7")
+	assertFileInCollection(t, coll, "file3", "b32642de88c24a48f9de7f76698eb7a9a65dae58")
+	assertCollectionSize(t, 2, coll)
+	assertWillNotUpdateSingleDirectory(t, fixture, subdir)
 }
 
 func assertCollectionSize(t *testing.T, expected int, coll RSCollection) {

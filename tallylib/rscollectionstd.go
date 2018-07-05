@@ -30,6 +30,10 @@ func (coll *collection) InitEmpty() {
 	coll.files = make(map[string]RSCollectionFile)
 }
 
+func (coll *collection) Size() int {
+	return len(coll.files)
+}
+
 func (coll *collection) Update(name, sha1 string, size int64, timestamp time.Time) RSCollectionFile {
 	var file = new(file)
 	file.name = name
@@ -40,6 +44,10 @@ func (coll *collection) Update(name, sha1 string, size int64, timestamp time.Tim
 	coll.files[name] = file
 
 	return file
+}
+
+func (coll *collection) RemoveFile(name string) {
+	delete(coll.files, name)
 }
 
 func (coll *collection) UpdateFile(file RSCollectionFile) {

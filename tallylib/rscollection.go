@@ -26,6 +26,9 @@ type RSCollection interface {
 	// as an effective 'copy' operation
 	UpdateFile(file RSCollectionFile)
 
+	// Remove file from collection
+	RemoveFile(name string)
+
 	// Find exising record by file name (not full path)
 	// Note that name does not have to be an actual file path.
 	// It is typically a file path, relative to current directory
@@ -34,6 +37,9 @@ type RSCollection interface {
 	// Invode callback for every file stored in this collection.
 	// Order is not guaranteed
 	Visit(cb func(RSCollectionFile))
+
+	// Returns collection size
+	Size() int
 }
 
 type RSCollectionFile interface {

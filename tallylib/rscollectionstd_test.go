@@ -23,6 +23,26 @@ func Test_Update(t *testing.T) {
 
 	var fileByName = fixture.ByName(name)
 	assertFile(t, fileByName, name, sha1, size, now)
+	assertIntEquals(t, "coll.Size()", 1, fixture.Size())
+}
+
+func Test_Remove(t *testing.T) {
+	var fixture = NewCollection()
+	fixture.InitEmpty()
+
+	fixture.Update("file1", "sha1", 0, time.Now())
+	fixture.Update("file2", "sha2", 0, time.Now())
+
+	fixture.RemoveFile("file1")
+	if fixture.ByName("file1") != nil {
+		t.Log("file1 was not removed")
+		t.Fail()
+	}
+	if fixture.ByName("file2") == nil {
+		t.Log("file2 WAS removed")
+		t.Fail()
+	}
+	assertIntEquals(t, "coll.Size()", 1, fixture.Size())
 }
 
 func Test_UpdateFile(t *testing.T) {
