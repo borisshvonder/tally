@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func Test_UpdateSingleDirectory_1_file(t *testing.T) {
@@ -18,6 +19,8 @@ func Test_UpdateSingleDirectory_1_file(t *testing.T) {
 	var coll = assertUpdateSingleDirectory(t, fixture, subdir)
 	assertFileInCollection(t, coll, "file1", "943a702d06f34599aee1f8da8ef9f7296031d699")
 	assertCollectionSize(t, 1, coll)
+
+	assertWillNotUpdateSingleDirectory(t, fixture, subdir)
 }
 
 func Test_UpdateSingleDirectory_2_files(t *testing.T) {
@@ -34,6 +37,8 @@ func Test_UpdateSingleDirectory_2_files(t *testing.T) {
 	assertFileInCollection(t, coll, "file1", "943a702d06f34599aee1f8da8ef9f7296031d699")
 	assertFileInCollection(t, coll, "file2", "43ce0c8e7e28680735241ad3e5550aa361b96f53")
 	assertCollectionSize(t, 2, coll)
+
+	assertWillNotUpdateSingleDirectory(t, fixture, subdir1)
 }
 
 func assertCollectionSize(t *testing.T, expected int, coll RSCollection) {
@@ -58,21 +63,45 @@ func assertFileInCollection(t *testing.T, coll RSCollection, name, sha1 string) 
 		t.Fail()
 	}
 }
+func assertWillNotUpdateSingleDirectory(t *testing.T, fixture Tally, directory string) {
+	var collectionFile = resolveCollectionFileForDirectory(directory)
+	var oldTimestamp = getTimestampSafe(collectionFile)
+	if update(t, fixture, directory) {
+		t.Log("tally reported collection changed while it was not supposed to")
+		t.Fail()
+	}
+	var newTimestamp = getTimestampSafe(collectionFile)
+	if oldTimestamp != newTimestamp {
+		t.Log("tally should NOT touch collection file!")
+	}
+}
 
 func assertUpdateSingleDirectory(t *testing.T, fixture Tally, directory string) RSCollection {
+	if !update(t, fixture, directory) {
+		t.Log("tally did not report collection changed")
+		t.Fail()
+	}
+	return loadCollectionForDirectory(t, directory)
+}
+
+func update(t *testing.T, fixture Tally, directory string) bool {
 	changed, err := fixture.UpdateSingleDirectory(directory)
 	if err != nil {
 		t.Log("Cannot update", err)
 		t.Fail()
 	}
-	if !changed {
-		t.Log("tally did not report collection changed")
-		t.Fail()
-	}
+	return changed
+}
+
+func loadCollectionForDirectory(t *testing.T, directory string) RSCollection {
+	collectionFile := resolveCollectionFileForDirectory(directory)
+	return loadCollection(t, collectionFile)
+}
+
+func resolveCollectionFileForDirectory(directory string) string {
 	parent := filepath.Dir(directory)
 	name := filepath.Base(directory)
-	collFile := filepath.Join(parent, name+".rscollection")
-	return loadCollection(t, collFile)
+	return filepath.Join(parent, name+".rscollection")
 }
 
 func loadCollection(t *testing.T, filepath string) RSCollection {
@@ -125,4 +154,13 @@ func writefile(parent, name, contents string) string {
 		panic(err)
 	}
 	return ret
+}
+
+func getTimestampSafe(filepath string) time.Time {
+	stat, err := os.Stat(filepath)
+	if err != nil {
+		return time.Time{}
+	} else {
+		return stat.ModTime()
+	}
 }
