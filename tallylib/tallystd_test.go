@@ -155,7 +155,86 @@ func Test_will_fail_if_collectionFile_is_directory(t *testing.T) {
 	}
 }
 
+func Test_UpdateSingleDirectory_will_not_removeExtra_files(t *testing.T) {
+	fixture := createFixture()
+	
+	tmpdir := mktmp("Test_UpdateSingleDirectory_will_not_removeExtra_files")
+	defer os.RemoveAll(tmpdir)
+	
+	subdir1 := mkdir(tmpdir, "subdir1")
+	writefile(subdir1, "file1", "Hello, world!")
 
+	subdir2 := mkdir(subdir1, "subdir2")
+	writefile(subdir2, "file2", "Hello, world!")
+
+	var coll2  = assertUpdateSingleDirectory(t, fixture, subdir2)
+	var coll1  = assertUpdateSingleDirectory(t, fixture, subdir1)
+
+	var file2 = coll2.ByName("file2")
+	var relName = filepath.Join("subdir2", file2.Name())
+	coll1.Update(relName, file2.Sha1(), file2.Size(), file2.Timestamp())
+	var collFile, err = os.Create(filepath.Join(tmpdir, "subdir1.rscollection"))
+	if err != nil {
+		panic(err)
+	}
+	err = coll1.StoreTo(collFile)
+	if err != nil {
+		panic(err)
+	}
+	err = collFile.Close()
+	if err != nil {
+		panic(err)
+	}
+
+	assertWillNotUpdateSingleDirectory(t, fixture, subdir1)
+
+	writefile(subdir1, "file1", "Change me")
+	coll1 = assertUpdateSingleDirectory(t, fixture, subdir1)
+	if coll1.ByName(relName) == nil {
+		t.Log("File", relName, "gone from collection")
+		t.Fail()
+	}
+}
+
+func Test_UpdateSingleDirectory_will_removeExtraFiles(t *testing.T) {
+	fixture := createFixture()
+	var config = fixture.GetConfig()
+	config.removeExtraFiles = true
+	fixture.SetConfig(config)
+	
+	tmpdir := mktmp("Test_UpdateSingleDirectory_will_removeExtraFiles")
+	defer os.RemoveAll(tmpdir)
+	
+	subdir1 := mkdir(tmpdir, "subdir1")
+	writefile(subdir1, "file1", "Hello, world!")
+
+	subdir2 := mkdir(subdir1, "subdir2")
+	writefile(subdir2, "file2", "Hello, world!")
+
+	var coll2  = assertUpdateSingleDirectory(t, fixture, subdir2)
+	var coll1  = assertUpdateSingleDirectory(t, fixture, subdir1)
+
+	var file2 = coll2.ByName("file2")
+	var relName = filepath.Join("subdir2", file2.Name())
+	coll1.Update(relName, file2.Sha1(), file2.Size(), file2.Timestamp())
+	var collFile, err = os.Create(filepath.Join(tmpdir, "subdir1.rscollection"))
+	if err != nil {
+		panic(err)
+	}
+	err = coll1.StoreTo(collFile)
+	if err != nil {
+		panic(err)
+	}
+	err = collFile.Close()
+	if err != nil {
+		panic(err)
+	}
+	coll1 = assertUpdateSingleDirectory(t, fixture, subdir1)
+	if coll1.ByName(relName) != nil {
+		t.Log("File", relName, "should be removed")
+		t.Fail()
+	}
+}
 
 func Test_UpdateSingleDirectory(t *testing.T) {
 	fixture := createFixture()

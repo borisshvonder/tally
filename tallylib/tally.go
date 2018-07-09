@@ -25,12 +25,21 @@ type Tally interface {
 }
 
 type TallyConfig struct {
-	forceUpdate bool
-
 	// By default, tally stops on both errors and warnings. 
 	// Typically, ignoring warnings is pretty safe, but you may get 
 	// your .recollection files overwritten.
 	ignoreWarnings bool
+
+	// Force hash recalculation even if it looks like files were not
+	// updated
+	forceUpdate bool
+
+	// Remove any existing entries in .rscollection files that
+	// refer existing files in deeper in subtree, ex
+	// name="mydir/myotherdir/somegile"
+	// By default, tally keeps them untouched removing only ones
+	// which not present
+	removeExtraFiles bool
 
 	// Log verbosity.
 	//   0 means do not log anything,

@@ -82,7 +82,7 @@ func (tally *tally) UpdateSingleDirectory(directory string) (bool, error) {
 		} else {
 			var changed bool
 			var name = file.Name()
-			tally.debug("Working on file ", name)
+			tally.debug("Working on file", name)
 
 			var oldFile = oldColl.ByName(name)
 			oldColl.RemoveFile(name)
@@ -91,15 +91,23 @@ func (tally *tally) UpdateSingleDirectory(directory string) (bool, error) {
 				newColl.UpdateFile(oldFile)
 			}
 			changed, err = tally.updateFile(directory, name, newColl)
-			ret = changed || ret
 			if err != nil {
 				return ret, err
+			}
+			if changed {
+				ret = true
+				tally.info("Detected change in", name)
 			}
 		}
 	}
 
-	// files left in old collection means files were removed from disk
-	ret = ret || oldColl.Size() > 0
+	// files left in old collection could mean files were removed from disk
+	if tally.config.removeExtraFiles {
+		ret = ret || oldColl.Size() > 0
+	} else {
+		var changed = tally.removeMissingFiles(directory, oldColl, newColl)
+		ret = ret || changed
+	}
 
 	if ret {
 		// Collection has been modified, need to write it back
@@ -107,6 +115,22 @@ func (tally *tally) UpdateSingleDirectory(directory string) (bool, error) {
 	}
 
 	return ret, err
+}
+
+func (tally *tally) removeMissingFiles(directory string, oldColl, newColl RSCollection) bool {
+	var ret = false
+	oldColl.Visit( func(rsfile RSCollectionFile) {
+		var fullpath = filepath.Join(directory, rsfile.Name())
+		var _, err = os.Stat(fullpath)
+		if err != nil && os.IsNotExist(err) {
+			tally.info("File", fullpath, "has gone from disk, removing")
+			ret = true
+		} else {
+			tally.debug("Keeping", rsfile.Name(), "in collection since I can't tell if it was removed")
+			newColl.UpdateFile(rsfile)
+		}
+	})
+	return ret
 }
 
 func (tally *tally) updateFile(directory, filename string, coll RSCollection) (bool, error) {
