@@ -24,15 +24,14 @@ type Tally interface {
 	SetLog(log io.Writer)
 }
 
+// Tally configuration
+// Default options are overly safe, you probably want to set
+//  ignoreWarnings=true and removeExtraFiles=true for most of the usecases
 type TallyConfig struct {
 	// By default, tally stops on both errors and warnings. 
 	// Typically, ignoring warnings is pretty safe, but you may get 
 	// your .recollection files overwritten.
 	ignoreWarnings bool
-
-	// Force hash recalculation even if it looks like files were not
-	// updated
-	forceUpdate bool
 
 	// Remove any existing entries in .rscollection files that
 	// refer existing files in deeper in subtree, ex
@@ -40,6 +39,10 @@ type TallyConfig struct {
 	// By default, tally keeps them untouched removing only ones
 	// which not present
 	removeExtraFiles bool
+
+	// Force hash recalculation even if it looks like files were not
+	// updated
+	forceUpdate bool
 
 	// Log verbosity.
 	//   0 means do not log anything,
