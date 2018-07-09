@@ -116,7 +116,7 @@ func (tally *tally) updateFile(directory, filename string, coll RSCollection) (b
 	if err != nil {
 		// Failure to update single file is not critical
 		tally.warn("Could not update", fullpath, err)
-		if tally.config.stopOnWarnings {
+		if !tally.config.ignoreWarnings {
 			tally.warn("Stopping on warning")
 			return ret, err
 		}
@@ -174,7 +174,7 @@ func (tally *tally) loadExistingCollection(fromFile string) (RSCollection, error
 		var closeErr = file.Close()
 		if err != nil {
 			tally.warn("Cannot load file", fromFile)
-			if tally.config.stopOnWarnings {
+			if !tally.config.ignoreWarnings {
 				tally.err("Stopping on warning")
 				return nil, tally.accessError(fromFile, "Load error", err)
 			} else {

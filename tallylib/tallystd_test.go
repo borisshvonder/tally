@@ -21,7 +21,7 @@ func createFixture() Tally {
 func Test_DefaultConfig(t *testing.T) {
 	fixture := NewTally()
 	config := fixture.GetConfig()
-	if config.forceUpdate || config.stopOnWarnings || config.logVerbosity != 3 {
+	if config.forceUpdate || config.ignoreWarnings || config.logVerbosity != 3 {
 		t.Log("Invalid default config")
 		t.Fail()
 	}
@@ -71,9 +71,6 @@ func Test_UpdateSingleDirectory_will_fail_when_pointed_to_file(t *testing.T) {
 
 func Test_UpdateSingleDirectory_will_fail_when_no_access_to_file(t *testing.T) {
 	var fixture = createFixture()
-	var config = fixture.GetConfig()
-	config.stopOnWarnings = true
-	fixture.SetConfig(config)
 
 	var tmpdir = mktmp("Test_UpdateSingleDirectory_fail_when_no_access_to_file")
 	defer os.RemoveAll(tmpdir)
@@ -91,6 +88,9 @@ func Test_UpdateSingleDirectory_will_fail_when_no_access_to_file(t *testing.T) {
 
 func Test_UpdateSingleDirectory_will_ignore_no_access_to_file(t *testing.T) {
 	var fixture = createFixture()
+	var config = fixture.GetConfig()
+	config.ignoreWarnings = true
+	fixture.SetConfig(config)
 
 	var tmpdir = mktmp("Test_UpdateSingleDirectory_will_fail_when_invalid_coecton_file")
 	defer os.RemoveAll(tmpdir)
@@ -110,9 +110,6 @@ func Test_UpdateSingleDirectory_will_ignore_no_access_to_file(t *testing.T) {
 
 func Test_UpdateSingleDirectory_will_fail_when_invalid_collecton_file(t *testing.T) {
 	var fixture = createFixture()
-	var config = fixture.GetConfig()
-	config.stopOnWarnings = true
-	fixture.SetConfig(config)
 
 	var tmpdir = mktmp("Test_UpdateSingleDirectory_will_fail_when_invalid_coecton_file")
 	defer os.RemoveAll(tmpdir)
@@ -122,7 +119,7 @@ func Test_UpdateSingleDirectory_will_fail_when_invalid_collecton_file(t *testing
 	
 	var _, err = fixture.UpdateSingleDirectory(subdir)
 	if err == nil {
-		t.Log("Should fail when stopOnWarnings and collection file is bad")
+		t.Log("Should fail when collection file is bad")
 		t.Fail()
 	}
 }
@@ -148,6 +145,9 @@ func Test_UpdateSingleDirectory_will_not_fail_when_no_access_to_collecton_file(t
 
 func Test_UpdateSingleDirectory(t *testing.T) {
 	fixture := createFixture()
+	var config = fixture.GetConfig()
+	config.ignoreWarnings = true
+	fixture.SetConfig(config)
 	tmpdir := mktmp("Test_UpdateSingleDirectory")
 	defer os.RemoveAll(tmpdir)
 	

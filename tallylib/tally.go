@@ -27,9 +27,10 @@ type Tally interface {
 type TallyConfig struct {
 	forceUpdate bool
 
-	// By default, tally stops on errors but continues on warnings.
-	// Set this to true and tally will act like coward.
-	stopOnWarnings bool
+	// By default, tally stops on both errors and warnings. 
+	// Typically, ignoring warnings is pretty safe, but you may get 
+	// your .recollection files overwritten.
+	ignoreWarnings bool
 
 	// Log verbosity.
 	//   0 means do not log anything,
