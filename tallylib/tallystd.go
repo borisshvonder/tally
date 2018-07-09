@@ -38,16 +38,91 @@ func (tally *tally) SetLog(logfile io.Writer) {
 	tally.initLog()
 }
 
-func (tally *tally) UpdateSingleDirectory(directory string) (bool, error) {
-	tally.info("UpdateSingleDirectory(", directory, ")")
-	var stat, err = os.Stat(directory)
+func (tally *tally) UpdateRecursive(directory string) (bool, error) {
+	tally.info("UpdateRecursive(", directory, ")")
+	var err = tally.assertDirectory(directory)
 	if err != nil {
-		tally.err("Can't stat", directory, err)
 		return false, err
 	}
-	if !stat.IsDir() {
-		err = tally.accessError(directory, "supplied path is not a directory", nil)
-		tally.err(err)
+
+	var files []os.FileInfo
+	files, err = tally.listDirectory(directory)
+
+	var ret = false	
+	var changed = false
+
+	tally.debug("Stage1: updating subdirectories")
+	
+	for _, file := range files {
+		if file.IsDir() {
+			tally.debug("Invoking UpdateRecursive(", file.Name(), ")")
+			var fullpath = filepath.Join(directory, file.Name())
+			changed, err = tally.UpdateRecursive(fullpath)
+			ret = ret || changed
+			if err != nil {
+				return ret, err
+			}
+		} else {
+			tally.debug("Skipping file", file.Name())
+		}
+	}
+
+
+	tally.debug("Stage2: update", directory)
+
+	changed, err = tally.UpdateSingleDirectory(directory)
+	ret = ret || changed
+	if err != nil {
+		return ret, err
+	}
+
+	if tally.config.updateParents {
+		tally.debug("Stage3: updating parents")
+		changed, err = tally.updateParents(directory)
+		ret = ret || changed
+	}
+
+	return ret, err
+}
+
+func (tally *tally) updateParents(directory string) (bool, error) {
+	var ret = false
+	var err error
+	
+	for parent := filepath.Dir(directory); err == nil && parent != ""; parent = filepath.Dir(parent) {
+		var collectionFile = resolveCollectionFileForDirectory(parent)
+		var stat, err = os.Stat(collectionFile)
+		if err == nil {
+			if stat.IsDir() {
+				tally.info("Stopping updating patents, file", collectionFile, "is a directory")
+				break
+			} else {
+				tally.debug("file ", collectionFile, "found")
+				tally.info("Updating parent", parent)
+
+				var changed bool
+				changed, err = tally.UpdateSingleDirectory(parent)
+				ret = ret || changed
+				if err != nil {
+					return ret, err
+				}
+			}
+		} else {
+			if os.IsNotExist(err) {
+				tally.info("Stopping updating parents, file", collectionFile, "not found")
+			} else {
+				tally.info("Stopping updating parents, stat error on file", collectionFile, ":", err)
+			}
+		}
+	}
+
+	return ret, nil
+}
+
+func (tally *tally) UpdateSingleDirectory(directory string) (bool, error) {
+	tally.info("UpdateSingleDirectory(", directory, ")")
+	var err = tally.assertDirectory(directory)
+	if err != nil {
 		return false, err
 	}
 
@@ -67,13 +142,8 @@ func (tally *tally) UpdateSingleDirectory(directory string) (bool, error) {
 	newColl = NewCollection()
 	newColl.InitEmpty()
 
-	tally.debug("Listing files in directory ", directory)
 	var files []os.FileInfo
-	files, err = ioutil.ReadDir(directory)
-	if err != nil {
-		return false, err
-	}
-	tally.debug("Got", len(files), "entries")
+	files, err = tally.listDirectory(directory)
 	var ret = false
 
 	for _, file := range files {
@@ -115,6 +185,36 @@ func (tally *tally) UpdateSingleDirectory(directory string) (bool, error) {
 	}
 
 	return ret, err
+}
+
+func (tally *tally) listDirectory(directory string) ([]os.FileInfo, error) {
+	tally.debug("Listing files in directory ", directory)
+	var files, err = ioutil.ReadDir(directory)
+	if err != nil {
+		err = tally.accessError(directory, "Can't list", err)
+		return nil, err
+	}
+	tally.debug("Got", len(files), "entries")
+	return files, nil
+}
+
+func (tally *tally) assertDirectory(directory string) error {
+	var stat, err = os.Stat(directory)
+	if err != nil {
+		if os.IsNotExist(err) {
+			err = tally.accessError(directory, "does not exist", err)
+		} else {
+			err = tally.accessError(directory, "Can't stat", err)
+		}
+		tally.err(err)
+		return err
+	}
+	if !stat.IsDir() {
+		err = tally.accessError(directory, "supplied path is not a directory", nil)
+		tally.err(err)
+		return err
+	}
+	return nil
 }
 
 func (tally *tally) removeMissingFiles(directory string, oldColl, newColl RSCollection) bool {
@@ -229,10 +329,6 @@ func (tally *tally) accessError(filepath string, message string, cause error) er
 	tally.err(ret)
 
 	return ret
-}
-
-func (tally *tally) UpdateRecursive(directory string) (bool, error) {
-	panic("NIY")
 }
 
 func (tally *tally) initLog() {

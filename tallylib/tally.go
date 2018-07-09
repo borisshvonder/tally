@@ -26,7 +26,8 @@ type Tally interface {
 
 // Tally configuration
 // Default options are overly safe, you probably want to set
-//  ignoreWarnings=true and removeExtraFiles=true for most of the usecases
+//  ignoreWarnings=true for most of the usecases
+// Consider also setting removeExtraFiles=true and updateParents=true
 type TallyConfig struct {
 	// By default, tally stops on both errors and warnings. 
 	// Typically, ignoring warnings is pretty safe, but you may get 
@@ -39,6 +40,12 @@ type TallyConfig struct {
 	// By default, tally keeps them untouched removing only ones
 	// which not present
 	removeExtraFiles bool
+
+	// Useful when you have an exising tree of .rscollection files but
+	// want to update just specific subfolder. When updateParents=true,
+	// tally will go up your subfolders and update any parent folders 
+	// with .rscollection files present
+	updateParents bool
 
 	// Force hash recalculation even if it looks like files were not
 	// updated
