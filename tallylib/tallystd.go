@@ -39,6 +39,7 @@ func (tally *tally) SetLog(logfile io.Writer) {
 }
 
 func (tally *tally) UpdateSingleDirectory(directory string) (bool, error) {
+	tally.info("UpdateSingleDirectory(", directory, ")")
 	var stat, err = os.Stat(directory)
 	if err != nil {
 		tally.err("Can't stat", directory, err)
