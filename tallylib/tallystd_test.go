@@ -140,6 +140,20 @@ func Test_UpdateSingleDirectory_will_not_fail_when_no_access_to_collecton_file(t
 	}
 }
 
+func Test_will_fail_if_collectionFile_is_directory(t *testing.T) {
+	var fixture = createFixture()
+	var tmpdir = mktmp("Test_will_fail_if_collectionFile_is_directory")
+	defer os.RemoveAll(tmpdir)
+
+	var subdir = mkdir(tmpdir, "subdir")
+	mkdir(tmpdir, "subdir.rscollection")
+
+	var _, err = fixture.UpdateSingleDirectory(subdir)
+	if err == nil {
+		t.Log("Should fail when trying to load from non-file")
+		t.Fail()
+	}
+}
 
 
 
@@ -324,14 +338,3 @@ func Test_resolveCollectionFileForDirectory(t *testing.T) {
 	assertStringEquals(t, "/.rscollection", resolveCollectionFileForDirectory("/"))
 }
 
-func Test_loadExistingCollection_will_fail_if_trying_to_load_from_dir(t *testing.T) {
-	var fixture = new(tally)
-	//fixture.config.logVerbosity = 100
-	//fixture.SetLog(os.Stdout)
-
-	var _, err = fixture.loadExistingCollection(".")
-	if err == nil {
-		t.Log("Should fail when trying to load from non-file")
-		t.Fail()
-	}
-}
