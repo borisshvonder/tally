@@ -41,12 +41,13 @@ type TallyConfig struct {
 	logVerbosity int
 }
 
-type CollectionFileAccessError struct {
+type AccessError struct {
 	filepath string // path to file
 	message  string // additional message
 	cause    error  // underlying error, if any
 }
 
-func (e *CollectionFileAccessError) Error() string {
+func (e *AccessError) Error() string {
 	return e.filepath + " " + e.message + " " + e.cause.Error()
 }
+

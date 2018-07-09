@@ -1,8 +1,8 @@
 package tallylib
 
 import (
-	"crypto/sha1"
 	"encoding/hex"
+	"crypto/sha1"
 	"io"
 	"os"
 )

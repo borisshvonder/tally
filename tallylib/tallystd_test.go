@@ -11,18 +11,146 @@ import (
 func createFixture() Tally {
 	fixture := NewTally()
 	// Uncomment to enable logging:
-	//fixture.SetLog(os.Stdout)
+	// fixture.SetLog(os.Stdout)
 	var config TallyConfig
 	config.logVerbosity = 100
 	fixture.SetConfig(config)
 	return fixture
 }
 
+func Test_DefaultConfig(t *testing.T) {
+	fixture := NewTally()
+	config := fixture.GetConfig()
+	if config.forceUpdate || config.stopOnWarnings || config.logVerbosity != 3 {
+		t.Log("Invalid default config")
+		t.Fail()
+	}
+}
+
+func Test_UpdateSingleDirectory_will_fail_when_no_directory(t *testing.T) {
+	fixture := createFixture()
+	
+	var _, err = fixture.UpdateSingleDirectory("this-directory-does-notexist")
+	if err == nil {
+		t.Log("Should fail when directory does not exist")
+		t.Fail()
+	}
+}
+
+func Test_UpdateSingleDirectory_will_fail_when_no_access(t *testing.T) {
+	fixture := createFixture()
+	tmpdir := mktmp("Test_UpdateSingleDirectory_will_fail_when_no_access")
+	defer os.RemoveAll(tmpdir)
+
+	subdir := filepath.Join(tmpdir, "forbidden")
+	os.Mkdir(subdir, 0)
+	
+	var _, err = fixture.UpdateSingleDirectory(subdir)
+	if err == nil {
+		t.Log("Should fail when directory has incorrect permssions")
+		t.Fail()
+	}
+}
+
+
+func Test_UpdateSingleDirectory_will_fail_when_pointed_to_file(t *testing.T) {
+	fixture := createFixture()
+	tmpdir := mktmp("Test_UpdateSingleDirectory_will_fail_when_pointed_to_file")
+	defer os.RemoveAll(tmpdir)
+
+	subdir := mkdir(tmpdir, "forbidden")
+	var file =  writefile(subdir, "file1", "Hello, world!")
+	
+	var _, err = fixture.UpdateSingleDirectory(file)
+	if err == nil {
+		t.Log("Should fail when target directory is a file")
+		t.Fail()
+	}
+}
+
+
+func Test_UpdateSingleDirectory_will_fail_when_no_access_to_file(t *testing.T) {
+	var fixture = createFixture()
+	var config = fixture.GetConfig()
+	config.stopOnWarnings = true
+	fixture.SetConfig(config)
+
+	var tmpdir = mktmp("Test_UpdateSingleDirectory_fail_when_no_access_to_file")
+	defer os.RemoveAll(tmpdir)
+
+	var subdir = mkdir(tmpdir, "subdir")
+	var file =  writefile(subdir, "file1", "Hello, world!")
+	os.Chmod(file, 0)
+	
+	var _, err = fixture.UpdateSingleDirectory(subdir)
+	if err == nil {
+		t.Log("Should fail when input file has no read permssions")
+		t.Fail()
+	}
+}
+
+func Test_UpdateSingleDirectory_will_ignore_no_access_to_file(t *testing.T) {
+	var fixture = createFixture()
+
+	var tmpdir = mktmp("Test_UpdateSingleDirectory_will_fail_when_invalid_coecton_file")
+	defer os.RemoveAll(tmpdir)
+
+	var subdir = mkdir(tmpdir, "subdir")
+	writefile(subdir, "file1", "Hello, world!")
+	var file2 = writefile(subdir, "file2", "Hello, world!")
+	os.Chmod(file2, 0)
+
+	var coll = assertUpdateSingleDirectory(t, fixture, subdir)
+	assertFileInCollection(t, coll, "file1", "943a702d06f34599aee1f8da8ef9f7296031d699")
+	assertCollectionSize(t, 1, coll)
+	mkdir(subdir, "this-should-be-ignored")
+	assertWillNotUpdateSingleDirectory(t, fixture, subdir)
+}
+
+
+func Test_UpdateSingleDirectory_will_fail_when_invalid_collecton_file(t *testing.T) {
+	var fixture = createFixture()
+	var config = fixture.GetConfig()
+	config.stopOnWarnings = true
+	fixture.SetConfig(config)
+
+	var tmpdir = mktmp("Test_UpdateSingleDirectory_will_fail_when_invalid_coecton_file")
+	defer os.RemoveAll(tmpdir)
+
+	var subdir = mkdir(tmpdir, "subdir")
+	writefile(tmpdir, "subdir.rscollection", "INVALID")
+	
+	var _, err = fixture.UpdateSingleDirectory(subdir)
+	if err == nil {
+		t.Log("Should fail when stopOnWarnings and collection file is bad")
+		t.Fail()
+	}
+}
+
+func Test_UpdateSingleDirectory_will_not_fail_when_no_access_to_collecton_file(t *testing.T) {
+	var fixture = createFixture()
+	var tmpdir = mktmp("Test_UpdateSingleDirectory_will_not_fail_when_no_access_to_collecton_file")
+	defer os.RemoveAll(tmpdir)
+
+	var subdir = mkdir(tmpdir, "subdir")
+	var collectionFile =  writefile(tmpdir, "subdir.rscollection", "<RsCollection/>")
+	os.Chmod(collectionFile, 0)
+	
+	var _, err = fixture.UpdateSingleDirectory(subdir)
+	if err == nil {
+		t.Log("Should fail when input file has no read permssions")
+		t.Fail()
+	}
+}
+
+
+
+
 func Test_UpdateSingleDirectory(t *testing.T) {
 	fixture := createFixture()
 	tmpdir := mktmp("Test_UpdateSingleDirectory")
 	defer os.RemoveAll(tmpdir)
-
+	
 	subdir := mkdir(tmpdir, "subdir")
 	writefile(subdir, "file1", "Hello, world!")
 	var coll = assertUpdateSingleDirectory(t, fixture, subdir)
@@ -30,6 +158,7 @@ func Test_UpdateSingleDirectory(t *testing.T) {
 	assertCollectionSize(t, 1, coll)
 	mkdir(subdir, "this-should-be-ignored")
 	assertWillNotUpdateSingleDirectory(t, fixture, subdir)
+
 
 	writefile(subdir, "file2", "Hello again")
 	coll = assertUpdateSingleDirectory(t, fixture, subdir)
@@ -193,4 +322,16 @@ func Test_resolveCollectionFileForDirectory(t *testing.T) {
 	assertStringEquals(t, "/parent/dir.rscollection", resolveCollectionFileForDirectory("/parent/dir/"))
 	assertStringEquals(t, ".rscollection", resolveCollectionFileForDirectory(""))
 	assertStringEquals(t, "/.rscollection", resolveCollectionFileForDirectory("/"))
+}
+
+func Test_loadExistingCollection_will_fail_if_trying_to_load_from_dir(t *testing.T) {
+	var fixture = new(tally)
+	//fixture.config.logVerbosity = 100
+	//fixture.SetLog(os.Stdout)
+
+	var _, err = fixture.loadExistingCollection(".")
+	if err == nil {
+		t.Log("Should fail when trying to load from non-file")
+		t.Fail()
+	}
 }
