@@ -20,7 +20,7 @@ type tally struct {
 
 func NewTally() Tally {
 	var ret = new(tally)
-	ret.config.logVerbosity = 3
+	ret.config.LogVerbosity = 3
 	ret.SetLog(ioutil.Discard)
 	return ret
 }
@@ -46,7 +46,7 @@ func (tally *tally) UpdateRecursive(directory string) (bool, error) {
 	}
 	
 	tally.debug("Stage1: updating children")
-	var ret, changed bool
+	var ret bool
 	
 	ret, err = tally.updateChildren(directory)
 	if err != nil {
@@ -54,10 +54,9 @@ func (tally *tally) UpdateRecursive(directory string) (bool, error) {
 	}
 
 
-	if tally.config.updateParents {
+	if tally.config.UpdateParents && ret {
 		tally.debug("Stage3: updating parents")
-		changed, err = tally.updateParents(directory)
-		ret = ret || changed
+		_, err = tally.UpdateParents(directory)
 	}
 
 	return ret, err
@@ -92,7 +91,7 @@ func (tally *tally) updateChildren(directory string) (bool, error) {
 	return ret, err
 }
 
-func (tally *tally) updateParents(directory string) (bool, error) {
+func (tally *tally) UpdateParents(directory string) (bool, error) {
 	var ret = false
 	var err error
 	
@@ -180,7 +179,7 @@ func (tally *tally) UpdateSingleDirectory(directory string) (bool, error) {
 	}
 
 	// files left in old collection could mean files were removed from disk
-	if tally.config.removeExtraFiles {
+	if tally.config.RemoveExtraFiles {
 		ret = ret || oldColl.Size() > 0
 	} else {
 		var changed = tally.removeMissingFiles(directory, oldColl, newColl)
@@ -244,12 +243,12 @@ func (tally *tally) removeMissingFiles(directory string, oldColl, newColl RSColl
 func (tally *tally) updateFile(directory, filename string, coll RSCollection) (bool, error) {
 	tally.debug("Checking file", filename, "in directory", directory)
 	var fullpath = filepath.Join(directory, filename)
-	var ret, err = updateFile(coll, filename, fullpath, tally.config.forceUpdate)
+	var ret, err = updateFile(coll, filename, fullpath, tally.config.ForceUpdate)
 
 	if err != nil {
 		// Failure to update single file is not critical
 		tally.warn("Could not update", fullpath, err)
-		if !tally.config.ignoreWarnings {
+		if !tally.config.IgnoreWarnings {
 			tally.warn("Stopping on warning")
 			return ret, err
 		}
@@ -307,7 +306,7 @@ func (tally *tally) loadExistingCollection(fromFile string) (RSCollection, error
 		var closeErr = file.Close()
 		if err != nil {
 			tally.warn("Cannot load file", fromFile)
-			if !tally.config.ignoreWarnings {
+			if !tally.config.IgnoreWarnings {
 				tally.err("Stopping on warning")
 				return nil, tally.accessError(fromFile, "Load error", err)
 			} else {
@@ -347,25 +346,25 @@ func (tally *tally) initLog() {
 }
 
 func (tally *tally) err(v ...interface{}) {
-	if tally.config.logVerbosity >= 1 {
+	if tally.config.LogVerbosity >= 1 {
 		tally.loggerErr.Println(v)
 	}
 }
 
 func (tally *tally) warn(v ...interface{}) {
-	if tally.config.logVerbosity >= 2 {
+	if tally.config.LogVerbosity >= 2 {
 		tally.loggerWarn.Println(v)
 	}
 }
 
 func (tally *tally) info(v ...interface{}) {
-	if tally.config.logVerbosity >= 3 {
+	if tally.config.LogVerbosity >= 3 {
 		tally.loggerInfo.Println(v)
 	}
 }
 
 func (tally *tally) debug(v ...interface{}) {
-	if tally.config.logVerbosity >= 4 {
+	if tally.config.LogVerbosity >= 4 {
 		tally.loggerDebug.Println(v)
 	}
 }

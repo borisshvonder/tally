@@ -13,7 +13,7 @@ func createFixture() Tally {
 	// Uncomment to enable logging:
 	// fixture.SetLog(os.Stdout)
 	var config TallyConfig
-	config.logVerbosity = 100
+	config.LogVerbosity = 100
 	fixture.SetConfig(config)
 	return fixture
 }
@@ -21,7 +21,7 @@ func createFixture() Tally {
 func Test_DefaultConfig(t *testing.T) {
 	fixture := NewTally()
 	config := fixture.GetConfig()
-	if config.forceUpdate || config.ignoreWarnings || config.logVerbosity != 3 {
+	if config.ForceUpdate || config.IgnoreWarnings || config.LogVerbosity != 3 {
 		t.Log("Invalid default config")
 		t.Fail()
 	}
@@ -90,7 +90,7 @@ func Test_UpdateSingleDirectory_will_fail_when_no_access_to_file(t *testing.T) {
 func Test_UpdateSingleDirectory_will_ignore_no_access_to_file(t *testing.T) {
 	var fixture = createFixture()
 	var config = fixture.GetConfig()
-	config.ignoreWarnings = true
+	config.IgnoreWarnings = true
 	fixture.SetConfig(config)
 
 	var tmpdir = mktmp("Test_UpdateSingleDirectory_will_ignore_no_access_to_file")
@@ -221,13 +221,13 @@ func Test_UpdateSingleDirectory_will_not_removeExtra_files(t *testing.T) {
 	}
 }
 
-func Test_UpdateSingleDirectory_will_removeExtraFiles(t *testing.T) {
+func Test_UpdateSingleDirectory_will_RemoveExtraFiles(t *testing.T) {
 	fixture := createFixture()
 	var config = fixture.GetConfig()
-	config.removeExtraFiles = true
+	config.RemoveExtraFiles = true
 	fixture.SetConfig(config)
 	
-	tmpdir := mktmp("Test_UpdateSingleDirectory_will_removeExtraFiles")
+	tmpdir := mktmp("Test_UpdateSingleDirectory_will_RemoveExtraFiles")
 	defer os.RemoveAll(tmpdir)
 	
 	subdir1 := mkdir(tmpdir, "subdir1")
@@ -264,7 +264,7 @@ func Test_UpdateSingleDirectory_will_removeExtraFiles(t *testing.T) {
 func Test_UpdateSingleDirectory(t *testing.T) {
 	fixture := createFixture()
 	var config = fixture.GetConfig()
-	config.ignoreWarnings = true
+	config.IgnoreWarnings = true
 	fixture.SetConfig(config)
 	tmpdir := mktmp("Test_UpdateSingleDirectory")
 	defer os.RemoveAll(tmpdir)
@@ -414,8 +414,8 @@ func Test_UpdateRecursive_will_fail_when_no_access_to_subfile(t *testing.T) {
 func Test_UpdateRecursive(t *testing.T) {
 	fixture := createFixture()
 	var config = fixture.GetConfig()
-	config.ignoreWarnings = true
-	config.updateParents = true
+	config.IgnoreWarnings = true
+	config.UpdateParents = true
 	fixture.SetConfig(config)
 	tmpdir := mktmp("Test_UpdateRecursive")
 	defer os.RemoveAll(tmpdir)
@@ -511,8 +511,8 @@ func  Test_UpdateRecursive_will_stop_updating_parents_when_encounters_unreadable
 func setup_9_directories_testcase(t *testing.T, tmpdir string) Tally {
 	fixture := createFixture()
 	var config = fixture.GetConfig()
-	config.ignoreWarnings = true
-	config.updateParents = true
+	config.IgnoreWarnings = true
+	config.UpdateParents = true
 	fixture.SetConfig(config)
 
 	subdir1 := mkdir(tmpdir, "1")

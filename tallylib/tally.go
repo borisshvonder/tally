@@ -26,30 +26,30 @@ type Tally interface {
 
 // Tally configuration
 // Default options are overly safe, you probably want to set
-//  ignoreWarnings=true for most of the usecases
-// Consider also setting removeExtraFiles=true and updateParents=true
+//  IgnoreWarnings=true for most of the usecases
+// Consider also setting RemoveExtraFiles=true and UpdateParents=true
 type TallyConfig struct {
 	// By default, tally stops on both errors and warnings. 
 	// Typically, ignoring warnings is pretty safe, but you may get 
 	// your .recollection files overwritten.
-	ignoreWarnings bool
+	IgnoreWarnings bool
 
 	// Remove any existing entries in .rscollection files that
 	// refer existing files in deeper in subtree, ex
 	// name="mydir/myotherdir/somegile"
 	// By default, tally keeps them untouched removing only ones
 	// which not present
-	removeExtraFiles bool
+	RemoveExtraFiles bool
 
 	// Useful when you have an exising tree of .rscollection files but
-	// want to update just specific subfolder. When updateParents=true,
+	// want to update just specific subfolder. When UpdateParents=true,
 	// tally will go up your subfolders and update any parent folders 
 	// with .rscollection files present
-	updateParents bool
+	UpdateParents bool
 
 	// Force hash recalculation even if it looks like files were not
 	// updated
-	forceUpdate bool
+	ForceUpdate bool
 
 	// Log verbosity.
 	//   0 means do not log anything,
@@ -58,7 +58,7 @@ type TallyConfig struct {
 	//   3 - warnings + errors + info (default)
 	//   4 - warnings + errors + info + debug
 	// more - increase logging more and more
-	logVerbosity int
+	LogVerbosity int
 }
 
 type AccessError struct {
