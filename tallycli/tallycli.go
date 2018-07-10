@@ -6,7 +6,10 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"runtime"
 )
+
+var version string // set by linker
 
 func main() {
 	flag.Usage = func() {
@@ -15,13 +18,27 @@ func main() {
 		fmt.Fprintf(flag.CommandLine.Output(), "USAGE: %s [options] [folder1, folder2, ...]\n", me)
 		flag.PrintDefaults()
 		fmt.Printf(`EXAMPLES
-	tallycli -IgnoreWarnings /my/audiobooks
-		Generate collection tree for all subfolders of /my/audiobooks including /my/audiobooks.rscollection
-	tallycli -UpdateParents /my/audiobooks/Heller/Catch-22
-		Update /my/audiobooks/Heller/Catch-22.rscollection, /my/audiobooks/Heller.rscollection and /my/audiobooks.rscollection
-	tallycli -LogVerbosity 0 -UpdateRecursive=false /my/audiobooks/Heller/Something-Happened
-		Quietly update just /my/audiobooks/Heller/Something-Happened.rscollection
+	tally -IgnoreWarnings /my/audiobooks
+		Generate collection tree for all subfolders of /my/audiobooks 
+		including /my/audiobooks.rscollection
+	tally -UpdateParents /my/audiobooks/Heller/Catch-22
+		Update /my/audiobooks/Heller/Catch-22.rscollection, 
+		/my/audiobooks/Heller.rscollection and /my/audiobooks.rscollection
+
+	tally -LogVerbosity 0 -UpdateRecursive=false \
+			/my/audiobooks/Heller/Something-Happened
+
+		Quietly update just 
+		/my/audiobooks/Heller/Something-Happened.rscollection
+BUGS
+	In order to efficiently detect if file needs it's sha1 recalculated, 
+	this tool stores file modification time in .rscollection file as 
+	non-standard (unsupported by RetroShare) attribute "updated". 
+	So far, RetroShare does not seem to care, but, in future, it may stop
+	handling such files.	
 `)
+		fmt.Printf("OS: %s\nArchitecture: %s\n", runtime.GOOS, runtime.GOARCH)
+		fmt.Println("Version:", version)
 	}
 
 	var tally = tallylib.NewTally()
