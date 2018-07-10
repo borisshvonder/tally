@@ -69,7 +69,7 @@ func (tally *tally) updateChildren(directory string) (bool, error) {
 	var changed = false
 	
 	for _, file := range files {
-		if file.IsDir() {
+		if tally.isDir(file) {
 			tally.debug("Invoking updateChildren(", file.Name(), ")")
 			var fullpath = filepath.Join(directory, file.Name())
 			changed, err = tally.updateChildren(fullpath)
@@ -100,8 +100,8 @@ func (tally *tally) UpdateParents(directory string) (bool, error) {
 		var stat os.FileInfo
 		stat, err = os.Stat(collectionFile)
 		if err == nil {
-			if stat.IsDir() {
-				tally.info("Stopping updating patents, file", collectionFile, "is a directory")
+			if !tally.isFile(stat) {
+				tally.info("Stopping updating patents, file", collectionFile, "is not a regualr file")
 				break
 			} else {
 				tally.debug("file ", collectionFile, "found")
@@ -154,9 +154,7 @@ func (tally *tally) UpdateSingleDirectory(directory string) (bool, error) {
 	var ret = false
 
 	for _, file := range files {
-		if file.IsDir() {
-			tally.debug("Skipping", file.Name(), "because it is a directory")
-		} else {
+		if tally.isFile(file) {
 			var changed bool
 			var name = file.Name()
 			tally.debug("Working on file", name)
@@ -175,6 +173,8 @@ func (tally *tally) UpdateSingleDirectory(directory string) (bool, error) {
 				ret = true
 				tally.info("Detected change in", name)
 			}
+		} else {
+			tally.debug("Skipping", file.Name(), "because it is not a regular file")
 		}
 	}
 
@@ -216,7 +216,7 @@ func (tally *tally) assertDirectory(directory string) error {
 		tally.err(err)
 		return err
 	}
-	if !stat.IsDir() {
+	if !tally.isDir(stat) {
 		err = tally.accessError(directory, "supplied path is not a directory", nil)
 		tally.err(err)
 		return err
@@ -288,8 +288,8 @@ func (tally *tally) loadExistingCollection(fromFile string) (RSCollection, error
 			fileExists = false
 		}
 	} else {
-		if stat.IsDir() {
-			tally.debug("Path ", fromFile, " is a directory, failing")
+		if !tally.isFile(stat) {
+			tally.debug("Path ", fromFile, " is not a regular file, failing")
 			return nil, tally.accessError(fromFile, "File is DIRECTORY and cannot be written to", nil)
 		}
 		fileExists = true
@@ -367,6 +367,14 @@ func (tally *tally) debug(v ...interface{}) {
 	if tally.config.LogVerbosity >= 4 {
 		tally.loggerDebug.Println(v)
 	}
+}
+
+func (tally *tally) isDir(file os.FileInfo) bool {
+	return file.Mode().IsDir()
+}
+
+func (tally *tally) isFile(file os.FileInfo) bool {
+	return file.Mode().IsRegular()
 }
 
 func resolveCollectionFileForDirectory(directory string) string {

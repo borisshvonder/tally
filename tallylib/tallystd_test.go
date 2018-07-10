@@ -11,7 +11,7 @@ import (
 func createFixture() Tally {
 	fixture := NewTally()
 	// Uncomment to enable logging:
-	// fixture.SetLog(os.Stdout)
+	//fixture.SetLog(os.Stdout)
 	var config TallyConfig
 	config.LogVerbosity = 100
 	fixture.SetConfig(config)
@@ -99,7 +99,7 @@ func Test_UpdateSingleDirectory_will_ignore_no_access_to_file(t *testing.T) {
 	var subdir = mkdir(tmpdir, "subdir")
 	writefile(subdir, "file1", "Hello, world!")
 	var file2 = writefile(subdir, "file2", "Hello, world!")
-	os.Chmod(file2, 0)
+	os.Chmod(file2, 0111)
 
 	var coll = assertUpdateSingleDirectory(t, fixture, subdir)
 	assertFileInCollection(t, coll, "file1", "943a702d06f34599aee1f8da8ef9f7296031d699")
