@@ -86,13 +86,14 @@ func Test_UpdateSingleDirectory_will_fail_when_no_access_to_file(t *testing.T) {
 	}
 }
 
+
 func Test_UpdateSingleDirectory_will_ignore_no_access_to_file(t *testing.T) {
 	var fixture = createFixture()
 	var config = fixture.GetConfig()
 	config.ignoreWarnings = true
 	fixture.SetConfig(config)
 
-	var tmpdir = mktmp("Test_UpdateSingleDirectory_will_fail_when_invalid_coecton_file")
+	var tmpdir = mktmp("Test_UpdateSingleDirectory_will_ignore_no_access_to_file")
 	defer os.RemoveAll(tmpdir)
 
 	var subdir = mkdir(tmpdir, "subdir")
@@ -124,20 +125,44 @@ func Test_UpdateSingleDirectory_will_fail_when_invalid_collecton_file(t *testing
 	}
 }
 
-func Test_UpdateSingleDirectory_will_not_fail_when_no_access_to_collecton_file(t *testing.T) {
+func Test_UpdateSingleDirectory_will_not_fail_when_has_full_access_to_collecton_file(t *testing.T) {
 	var fixture = createFixture()
-	var tmpdir = mktmp("Test_UpdateSingleDirectory_will_not_fail_when_no_access_to_collecton_file")
+	if !do_test_UpdateSingleDirectory_when_no_access_to_collecton_file(fixture, os.ModePerm) {
+		t.Log("Should fail if no read access to collection file")
+		t.Fail()
+	}
+}
+
+func Test_UpdateSingleDirectory_will_fail_when_no_read_access_to_collecton_file(t *testing.T) {
+	var fixture = createFixture()
+	if do_test_UpdateSingleDirectory_when_no_access_to_collecton_file(fixture, 0) {
+		t.Log("Should fail if no read access to collection file")
+		t.Fail()
+	}
+}
+
+func Test_UpdateSingleDirectory_will_fail_when_no_write_access_to_collecton_file(t *testing.T) {
+	var fixture = createFixture()
+	if do_test_UpdateSingleDirectory_when_no_access_to_collecton_file(fixture, 0555) {
+		t.Log("Should fail if no read access to collection file")
+		t.Fail()
+	}
+}
+
+func do_test_UpdateSingleDirectory_when_no_access_to_collecton_file(fixture Tally, perm os.FileMode) bool {
+	var tmpdir = mktmp("do_test_UpdateSingleDirectory_when_no_access_to_collecton_file")
 	defer os.RemoveAll(tmpdir)
 
 	var subdir = mkdir(tmpdir, "subdir")
+	writefile(subdir, "file1", "change")
 	var collectionFile =  writefile(tmpdir, "subdir.rscollection", "<RsCollection/>")
-	os.Chmod(collectionFile, 0)
+	os.Chmod(collectionFile, perm)
 	
 	var _, err = fixture.UpdateSingleDirectory(subdir)
-	if err == nil {
-		t.Log("Should fail when input file has no read permssions")
-		t.Fail()
+	if err != nil {
+		print(err)
 	}
+	return err == nil
 }
 
 func Test_will_fail_if_collectionFile_is_directory(t *testing.T) {
@@ -292,6 +317,100 @@ func Test_UpdateSingleDirectory(t *testing.T) {
 	assertWillNotUpdateSingleDirectory(t, fixture, subdir)
 }
 
+func Test_UpdateRecursive_will_fail_when_no_directory(t *testing.T) {
+	fixture := createFixture()
+	
+	var _, err = fixture.UpdateRecursive("this-directory-does-notexist")
+	if err == nil {
+		t.Log("Should fail when directory does not exist")
+		t.Fail()
+	}
+}
+
+func Test_UpdateRecursive_will_fail_when_no_access(t *testing.T) {
+	fixture := createFixture()
+	tmpdir := mktmp("Test_UpdateRecursive_will_fail_when_no_access")
+	defer os.RemoveAll(tmpdir)
+
+	subdir := filepath.Join(tmpdir, "forbidden")
+	os.Mkdir(subdir, 0)
+	
+	var _, err = fixture.UpdateRecursive(subdir)
+	if err == nil {
+		t.Log("Should fail when directory has incorrect permssions")
+		t.Fail()
+	}
+
+}
+
+func Test_UpdateRecursive_will_fail_when_no_access_to_subdir(t *testing.T) {
+	fixture := createFixture()
+	tmpdir := mktmp("Test_UpdateRecursive_will_fail_when_no_access_to_subdir")
+	defer os.RemoveAll(tmpdir)
+
+	subdir1 := filepath.Join(tmpdir, "subdir1")
+	subdir2 := filepath.Join(tmpdir, "subdir1")
+	os.Mkdir(subdir2, 0)
+	
+	var _, err = fixture.UpdateRecursive(subdir1)
+	if err == nil {
+		t.Log("Should fail when subdirectory has incorrect permssions")
+		t.Fail()
+	}
+
+}
+
+
+func Test_UpdateRecursive_will_fail_when_pointed_to_file(t *testing.T) {
+	fixture := createFixture()
+	tmpdir := mktmp("Test_UpdateSingleDirectory_will_fail_when_pointed_to_file")
+	defer os.RemoveAll(tmpdir)
+
+	subdir := mkdir(tmpdir, "forbidden")
+	var file =  writefile(subdir, "file1", "Hello, world!")
+	
+	var _, err = fixture.UpdateRecursive(file)
+	if err == nil {
+		t.Log("Should fail when target directory is a file")
+		t.Fail()
+	}
+}
+
+func Test_UpdateRecursive_will_fail_when_no_access_to_file(t *testing.T) {
+	var fixture = createFixture()
+
+	var tmpdir = mktmp("Test_UpdateRecursive_will_fail_when_no_access_to_file")
+	defer os.RemoveAll(tmpdir)
+
+	var subdir = mkdir(tmpdir, "subdir")
+	var file =  writefile(subdir, "file1", "Hello, world!")
+	os.Chmod(file, 0)
+	
+	var _, err = fixture.UpdateRecursive(subdir)
+	if err == nil {
+		t.Log("Should fail when input file has no read permssions")
+		t.Fail()
+	}
+}
+
+func Test_UpdateRecursive_will_fail_when_no_access_to_subfile(t *testing.T) {
+	var fixture = createFixture()
+
+	var tmpdir = mktmp("Test_UpdateRecursive_will_fail_when_no_access_to_subfile")
+	defer os.RemoveAll(tmpdir)
+
+	var subdir1 = mkdir(tmpdir, "subdir1")
+	var subdir2 = mkdir(subdir1, "subdir2")
+	var file2 =  writefile(subdir2, "file2", "Hello, world!")
+	os.Chmod(file2, 0)
+	
+	var _, err = fixture.UpdateRecursive(subdir1)
+	if err == nil {
+		t.Log("Should fail when input file in subdir has no read permssions")
+		t.Fail()
+	}
+}
+
 func Test_UpdateRecursive(t *testing.T) {
 	fixture := createFixture()
 	var config = fixture.GetConfig()
@@ -329,6 +448,95 @@ func Test_UpdateRecursive(t *testing.T) {
 
 	assertUpdateRecursive(t, fixture, subdir3)
 	assertShaChanged(t, coll2File, sha2)
+}
+func  Test_UpdateRecursive_will_update_hirerarchy(t *testing.T) {
+	var tmpdir = mktmp("Test_UpdateRecursive_will_update_hirerarchy")
+	defer os.RemoveAll(tmpdir)
+	var fixture = setup_9_directories_testcase(t, tmpdir)
+	
+	var coll2File = resolveCollectionFileForDirectory(filepath.Join(tmpdir, "1", "2"))
+	var sha2 = readShaFor(coll2File)
+
+	writefile(filepath.Join(tmpdir, "1", "2", "3", "4", "5", "6", "7", "8", "9"), "file9", "changed")
+	assertUpdateRecursive(t, fixture, filepath.Join(tmpdir, "1"))
+
+	assertShaChanged(t, coll2File, sha2)
+}
+
+func  Test_UpdateRecursive_will_stop_updating_parents_when_encounters_directory_in_place_of_collection_file(t *testing.T) {
+	var tmpdir = mktmp("Test_UpdateRecursive_will_stop_updating_parents_when_encounters_directory_in_place_of_collection_file")
+	defer os.RemoveAll(tmpdir)
+	var fixture = setup_9_directories_testcase(t, tmpdir)
+	
+	var coll2File = resolveCollectionFileForDirectory(filepath.Join(tmpdir, "1", "2"))
+	var sha2 = readShaFor(coll2File)
+
+	var coll4File = resolveCollectionFileForDirectory(filepath.Join(tmpdir, "1", "2", "3", "4"))
+	os.RemoveAll(coll4File)
+	var err = os.Mkdir(coll4File, os.ModeDir|os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
+
+	var subdir5 = filepath.Join(tmpdir, "1", "2", "3", "4", "5")
+	writefile(subdir5, "file5", "change")
+
+	assertUpdateRecursive(t, fixture, subdir5)
+	assertShaSame(t, coll2File, sha2)
+}
+
+func  Test_UpdateRecursive_will_stop_updating_parents_when_encounters_unreadable_rscollection_in_parent_dir(t *testing.T) {
+	var tmpdir = mktmp("Test_UpdateRecursive_will_stop_updating_parents_when_encounters_unreadable_rscollection_in_parent_dir")
+	defer os.RemoveAll(tmpdir)
+	var fixture = setup_9_directories_testcase(t, tmpdir)
+
+	var coll2File = resolveCollectionFileForDirectory(filepath.Join(tmpdir, "1", "2"))
+	var sha2 = readShaFor(coll2File)
+
+	var coll4File = resolveCollectionFileForDirectory(filepath.Join(tmpdir, "1", "2", "3", "4"))
+	os.Chmod(coll4File, 0)
+
+	var subdir5 = filepath.Join(tmpdir, "1", "2", "3", "4", "5")
+	writefile(subdir5, "file5", "change")
+
+	var _,  err = fixture.UpdateRecursive(subdir5)
+	if err == nil {
+		t.Log("Update should fail due to unreadable rscollection")
+		t.Fail()
+	}
+
+	assertShaSame(t, coll2File, sha2)
+}
+
+func setup_9_directories_testcase(t *testing.T, tmpdir string) Tally {
+	fixture := createFixture()
+	var config = fixture.GetConfig()
+	config.ignoreWarnings = true
+	config.updateParents = true
+	fixture.SetConfig(config)
+
+	subdir1 := mkdir(tmpdir, "1")
+	subdir2 := mkdir(subdir1, "2")
+	subdir3 := mkdir(subdir2, "3")
+	subdir4 := mkdir(subdir3, "4")
+	subdir5 := mkdir(subdir4, "5")
+	subdir6 := mkdir(subdir5, "6")
+	subdir7 := mkdir(subdir6, "7")
+	subdir8 := mkdir(subdir7, "8")
+	subdir9 := mkdir(subdir8, "9")
+	writefile(subdir9, "file9", "Hello 8!")
+	assertUpdateRecursive(t, fixture, subdir1)
+	assertWillNotUpdateRecursive(t, fixture, subdir1)
+
+	return fixture
+}
+
+func assertShaSame(t *testing.T, fullpath, oldSha string) {
+	var newSha = readShaFor(fullpath)
+	if newSha != oldSha {
+		t.Log("sha1 for file expeced:", oldSha, "actual:", newSha)
+		t.Fail()
+	}
 }
 
 func assertShaChanged(t *testing.T, fullpath, oldSha string) {

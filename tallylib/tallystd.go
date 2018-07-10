@@ -44,20 +44,36 @@ func (tally *tally) UpdateRecursive(directory string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	
+	tally.debug("Stage1: updating children")
+	var ret, changed bool
+	
+	ret, err = tally.updateChildren(directory)
+	if err != nil {
+		return ret, err
+	}
 
-	var files []os.FileInfo
-	files, err = tally.listDirectory(directory)
+
+	if tally.config.updateParents {
+		tally.debug("Stage3: updating parents")
+		changed, err = tally.updateParents(directory)
+		ret = ret || changed
+	}
+
+	return ret, err
+}
+
+func (tally *tally) updateChildren(directory string) (bool, error) {
+	var files, err = tally.listDirectory(directory)
 
 	var ret = false	
 	var changed = false
-
-	tally.debug("Stage1: updating subdirectories")
 	
 	for _, file := range files {
 		if file.IsDir() {
-			tally.debug("Invoking UpdateRecursive(", file.Name(), ")")
+			tally.debug("Invoking updateChildren(", file.Name(), ")")
 			var fullpath = filepath.Join(directory, file.Name())
-			changed, err = tally.UpdateRecursive(fullpath)
+			changed, err = tally.updateChildren(fullpath)
 			ret = ret || changed
 			if err != nil {
 				return ret, err
@@ -67,19 +83,10 @@ func (tally *tally) UpdateRecursive(directory string) (bool, error) {
 		}
 	}
 
-
-	tally.debug("Stage2: update", directory)
-
 	changed, err = tally.UpdateSingleDirectory(directory)
 	ret = ret || changed
 	if err != nil {
 		return ret, err
-	}
-
-	if tally.config.updateParents {
-		tally.debug("Stage3: updating parents")
-		changed, err = tally.updateParents(directory)
-		ret = ret || changed
 	}
 
 	return ret, err
