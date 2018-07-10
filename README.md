@@ -6,6 +6,7 @@ This program is designed to overcome RetroShare default search limitations. It g
 to download and build: 
 
 $ git clone https://github.com/borisshvonder/tally.git
+
 $ cd tally/tallycli && go build
 
 You need to set up you go language environment correctly.
