@@ -89,9 +89,10 @@ func (tally *tally) updateParents(directory string) (bool, error) {
 	var ret = false
 	var err error
 	
-	for parent := filepath.Dir(directory); err == nil && parent != ""; parent = filepath.Dir(parent) {
+	for parent := filepath.Dir(directory); err == nil && parent != "/"; parent = filepath.Dir(parent) {
 		var collectionFile = resolveCollectionFileForDirectory(parent)
-		var stat, err = os.Stat(collectionFile)
+		var stat os.FileInfo
+		stat, err = os.Stat(collectionFile)
 		if err == nil {
 			if stat.IsDir() {
 				tally.info("Stopping updating patents, file", collectionFile, "is a directory")

@@ -292,6 +292,72 @@ func Test_UpdateSingleDirectory(t *testing.T) {
 	assertWillNotUpdateSingleDirectory(t, fixture, subdir)
 }
 
+func Test_UpdateRecursive(t *testing.T) {
+	fixture := createFixture()
+	var config = fixture.GetConfig()
+	config.ignoreWarnings = true
+	config.updateParents = true
+	fixture.SetConfig(config)
+	tmpdir := mktmp("Test_UpdateRecursive")
+	defer os.RemoveAll(tmpdir)
+	
+	subdir1 := mkdir(tmpdir, "subdir1")
+	writefile(subdir1, "file1", "Hello, world!")
+	var coll = assertUpdateRecursive(t, fixture, subdir1)
+	assertCollectionSize(t, 1, coll)
+	assertFileInCollection(t, coll, "file1", "943a702d06f34599aee1f8da8ef9f7296031d699")
+
+	subdir2 := mkdir(subdir1, "subdir2")
+	writefile(subdir2, "file2", "Hello 2!")
+	coll = assertUpdateRecursive(t, fixture, subdir1)
+	assertCollectionSize(t, 2, coll)
+	assertFileInCollection(t, coll, "file1", "943a702d06f34599aee1f8da8ef9f7296031d699")
+	if coll.ByName("subdir2.rscollection") == nil {
+		t.Log("subdir2.rscollection entry not found")
+		t.Fail()
+	}
+	assertWillNotUpdateRecursive(t, fixture, subdir2)
+	assertWillNotUpdateRecursive(t, fixture, subdir1)
+
+	var coll2File = resolveCollectionFileForDirectory(subdir2)
+	var sha2 = readShaFor(coll2File)
+
+	subdir3 := mkdir(subdir2, "subdir3")
+	assertWillNotUpdateRecursive(t, fixture, subdir2)
+	assertWillNotUpdateRecursive(t, fixture, subdir1)
+	writefile(subdir3, "file3", "Hello 3!")
+
+	assertUpdateRecursive(t, fixture, subdir3)
+	assertShaChanged(t, coll2File, sha2)
+}
+
+func assertShaChanged(t *testing.T, fullpath, oldSha string) {
+	var newSha = readShaFor(fullpath)
+	if newSha == oldSha {
+		t.Log("sha1 for file", fullpath, "has not changed")
+		t.Fail()
+	}
+}
+
+func readShaFor(fullpath string) string {
+	var dir = filepath.Dir(fullpath)
+	var collectionFile =  resolveCollectionFileForDirectory(dir)
+	var fdesc, err = os.Open(collectionFile)
+	if err != nil {
+		panic(err)
+	}
+	var coll = NewCollection()
+	err = coll.LoadFrom(fdesc)
+	var closeErr = fdesc.Close()
+	if err != nil {
+		panic(err)
+	}
+	if closeErr != nil {
+		panic(closeErr)
+	}
+	return coll.ByName(filepath.Base(fullpath)).Sha1()
+}
+
 func assertCollectionSize(t *testing.T, expected int, coll RSCollection) {
 	actual := 0
 	coll.Visit(func(f RSCollectionFile) {
@@ -314,10 +380,19 @@ func assertFileInCollection(t *testing.T, coll RSCollection, name, sha1 string) 
 		t.Fail()
 	}
 }
-func assertWillNotUpdateSingleDirectory(t *testing.T, fixture Tally, directory string) {
+
+func assertUpdateRecursive(t *testing.T, fixture Tally, directory string) RSCollection {
+	if !update(t, fixture, directory, true) {
+		t.Log("tally did not report collection changed")
+		t.Fail()
+	}
+	return loadCollectionForDirectory(t, directory)
+}
+
+func assertWillNotUpdateRecursive(t *testing.T, fixture Tally, directory string) {
 	var collectionFile = resolveCollectionFileForDirectory(directory)
 	var oldTimestamp = getTimestampSafe(collectionFile)
-	if update(t, fixture, directory) {
+	if update(t, fixture, directory, true) {
 		t.Log("tally reported collection changed while it was not supposed to")
 		t.Fail()
 	}
@@ -327,16 +402,37 @@ func assertWillNotUpdateSingleDirectory(t *testing.T, fixture Tally, directory s
 	}
 }
 
+
+func assertWillNotUpdateSingleDirectory(t *testing.T, fixture Tally, directory string) {
+	var collectionFile = resolveCollectionFileForDirectory(directory)
+	var oldTimestamp = getTimestampSafe(collectionFile)
+	if update(t, fixture, directory, false) {
+		t.Log("tally reported collection changed while it was not supposed to")
+		t.Fail()
+	}
+	var newTimestamp = getTimestampSafe(collectionFile)
+	if oldTimestamp != newTimestamp {
+		t.Log("tally should NOT touch collection file!")
+	}
+}
+
+
 func assertUpdateSingleDirectory(t *testing.T, fixture Tally, directory string) RSCollection {
-	if !update(t, fixture, directory) {
+	if !update(t, fixture, directory, false) {
 		t.Log("tally did not report collection changed")
 		t.Fail()
 	}
 	return loadCollectionForDirectory(t, directory)
 }
 
-func update(t *testing.T, fixture Tally, directory string) bool {
-	changed, err := fixture.UpdateSingleDirectory(directory)
+func update(t *testing.T, fixture Tally, directory string, recursive bool) bool {
+	var changed bool
+	var err error
+	if recursive {
+		changed, err = fixture.UpdateRecursive(directory)
+	} else {
+		changed, err = fixture.UpdateSingleDirectory(directory)
+	}
 	if err != nil {
 		t.Log("Cannot update", err)
 		t.Fail()
