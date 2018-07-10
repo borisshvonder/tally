@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"serv6/tally/tallylib"
+	"github.com/borisshvonder/tally/tallylib"
 	"flag"
 	"os"
 	"path/filepath"
