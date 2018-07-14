@@ -416,7 +416,21 @@ func (tally *tally) resolveCollectionFileForDirectory(directory string) (string,
 	if err != nil {
 		return "", err
 	}
-	ret = filepath.Join(filepath.Dir(directory), ret)
+
+	if ret == "" {
+		var tplErr = new(ExpressionError)
+		tplErr.expression = tally.config.collectionPathnameExpression
+		tplErr.message = "Evaluates to empty string"
+		tally.err(tplErr)
+		return "", tplErr
+	}
+
+	if ret[0] == '/' {
+		tally.debug(ret, "is an absolute path")
+	} else {
+		ret = filepath.Join(filepath.Dir(directory), ret)
+	}
+
 	tally.debug("Resolved collection file for", directory, ":", ret)
 	return ret, nil
 }
@@ -446,7 +460,7 @@ func (tally *tally) ensureTemplateCompiled() error {
 }
 
 func (tally *tally) compileTemplate(expr string) (*template.Template, error) {
-	var tpl = template.New(expr)
+	var tpl = template.New("template")
 	var err error
 	tpl, err = tpl.Parse(expr)
 	if err != nil {
@@ -470,19 +484,29 @@ func (tally *tally) createEvaluationContext(directory string) (TallyPathNameEval
 	return ret, nil
 }
 
-func (tally *tally) executeTemplate(tpl *template.Template, context TallyPathNameEvalutationContext) (string, error) {
+func (tally *tally) executeTemplate(tpl *template.Template, context TallyPathNameEvalutationContext) (ret string, err error) {
+	defer func() {
+		if panicErr := recover(); panicErr != nil {
+			tally.err("Error executing template", panicErr)
+
+			var tplErr = new(ExpressionError)
+			tplErr.message = "Panic during evaluation"
+			tally.err(tplErr)
+			ret = ""
+			err = tplErr
+		}
+	}()
+
 	var buf strings.Builder
-	var err = tpl.Execute(io.Writer(&buf), context)
+	err = tpl.Execute(io.Writer(&buf), context)
 	if err != nil {
 		var tplErr = new(ExpressionError)
-		tplErr.expression = tpl.Name()
 		tplErr.message = "Cannot evaluate"
 		tplErr.cause = err
 		tally.err(tplErr)
 		return "", tplErr
-		
 	}
-	var ret string = buf.String()
+	ret = buf.String()
 	tally.debug("executeTemplate return", ret)
 	return ret, nil
 }

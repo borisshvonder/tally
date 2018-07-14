@@ -53,6 +53,40 @@ func Test_UpdateSingleDirectory_will_fail_when_no_access(t *testing.T) {
 	}
 }
 
+func Test_UpdateSingleDirectory_will_fail_when_filename_expression_is_empty(t *testing.T) {
+	fixture := createFixture()
+	tmpdir := mktmp("Test_UpdateSingleDirectory_will_fail_when_no_access")
+	defer os.RemoveAll(tmpdir)
+
+	var subdir = mkdir(tmpdir, "subdir")
+	var config = fixture.GetConfig()
+	config.collectionPathnameExpression=""
+	fixture.SetConfig(config)
+
+	var _, err = fixture.UpdateSingleDirectory(subdir)
+	if err == nil {
+		t.Log("Should fail due to collection file expression empty")
+		t.Fail()
+	}
+}
+
+
+func Test_UpdateSingleDirectory_will_fail_when_filename_expression_is_incorrect(t *testing.T) {
+	fixture := createFixture()
+	tmpdir := mktmp("Test_UpdateSingleDirectory_will_fail_when_no_access")
+	defer os.RemoveAll(tmpdir)
+
+	var subdir = mkdir(tmpdir, "subdir")
+	var config = fixture.GetConfig()
+	config.collectionPathnameExpression="{{.Iinvalid call}}"
+	fixture.SetConfig(config)
+
+	var _, err = fixture.UpdateSingleDirectory(subdir)
+	if err == nil {
+		t.Log("Should fail due to collection file expression invalid")
+		t.Fail()
+	}
+}
 
 func Test_UpdateSingleDirectory_will_fail_when_pointed_to_file(t *testing.T) {
 	fixture := createFixture()
@@ -260,6 +294,59 @@ func Test_UpdateSingleDirectory_will_RemoveExtraFiles(t *testing.T) {
 		t.Log("File", relName, "should be removed")
 		t.Fail()
 	}
+}
+
+func Test_UpdateSingleDirectoryi_with_custom_collection_name_expression(t *testing.T) {
+	fixture := createFixture()
+	var config = fixture.GetConfig()
+	config.IgnoreWarnings = true
+	config.collectionPathnameExpression = "{{.Path -1}}-{{.Path 0}}.rscollection"
+	fixture.SetConfig(config)
+	tmpdir := mktmp("Test_UpdateSingleDirectoryi_with_custom_collection_name_expression")
+	defer os.RemoveAll(tmpdir)
+	
+	subdir1 := mkdir(tmpdir, "subdir1")
+	subdir2 := mkdir(subdir1, "subdir2")
+	writefile(subdir2, "file2", "Hello, world!")
+
+	if !update(t, fixture, subdir2, false) {
+		t.Log("tally did not report collection changed")
+		t.Fail()
+	}
+
+	var collFile = filepath.Join(subdir1, "subdir1-subdir2.rscollection")
+	var coll = loadCollection(t, collFile)
+	assertFileInCollection(t, coll, "file2", "943a702d06f34599aee1f8da8ef9f7296031d699")
+	assertCollectionSize(t, 1, coll)
+}
+
+func Test__UpdateSingleDirectoryi_with_custom_absolute_collection_name_expression(t *testing.T) {
+        tmpdir := mktmp("Test_UpdateSingleDirectoryi_with_custom_collection_name_expression")
+        defer os.RemoveAll(tmpdir)                                              
+	colldir, err := filepath.Abs(mkdir(tmpdir, "collections"))
+	if err != nil {
+		panic("cannot resolve absolute path:"+err.Error())
+	}
+                                                                                
+        fixture := createFixture()                                              
+        var config = fixture.GetConfig()                                        
+        config.IgnoreWarnings = true                                            
+	
+        config.collectionPathnameExpression = filepath.Join(colldir, "{{.Path 0}}.rscollection")
+        fixture.SetConfig(config)                                               
+
+        subdir := mkdir(tmpdir, "subdir")
+        writefile(subdir, "file1", "Hello, world!")                            
+                                                                                
+        if !update(t, fixture, subdir, false) {                                
+                t.Log("tally did not report collection changed")                
+                t.Fail()                                                        
+        }                                                                       
+                                                                                
+        var collFile = filepath.Join(colldir, "subdir.rscollection")   
+        var coll = loadCollection(t, collFile)                                  
+        assertFileInCollection(t, coll, "file1", "943a702d06f34599aee1f8da8ef9f7296031d699")
+        assertCollectionSize(t, 1, coll)
 }
 
 func Test_UpdateSingleDirectory(t *testing.T) {
@@ -725,7 +812,7 @@ func Test_resolveRscollectionName(t *testing.T) {
 		"{{.Path -3}}-{{.Path -2}}-{{.Path -1}}-{{.Path 0}}-{{.Path 1}}.rscollection")
 }
 
-func Test_executeTemplate_InvalidTemplate(t *testing.T) {
+func Test_compileTemplate_InvalidTemplate(t *testing.T) {
 	var tallyImpl *tally = createFixture().(*tally)
 	var _, err = tallyImpl.compileTemplate("{--{invalid")
 	if err != nil {
@@ -733,6 +820,26 @@ func Test_executeTemplate_InvalidTemplate(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func Test_executeTemplate_InvalidTemplate(t *testing.T) {
+	var tallyImpl *tally = createFixture().(*tally)
+	var tpl, err = tallyImpl.compileTemplate("{{.InvalidFunc invalidarg}}")
+	if err == nil {
+		t.Log("Should not fail on valid template")
+		t.Fail()
+	}
+	var context = mockEvaluationContext("/some/path")
+	expanded, err := tallyImpl.executeTemplate(tpl, context)
+	if err == nil {
+		t.Log("Should not fail on syntactially correct template that could not be executed with proper context")
+		t.Fail()
+	}
+	if expanded != "" {
+		t.Log("Should produce empty output")
+		t.Fail()
+	}
+}
+
 
 func assertPathNameEvaluatesTo(t *testing.T, expected, path, expr string) {
 	var tallyImpl = createFixture().(*tally)
