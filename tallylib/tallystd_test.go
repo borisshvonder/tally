@@ -60,7 +60,7 @@ func Test_UpdateSingleDirectory_will_fail_when_filename_expression_is_empty(t *t
 
 	var subdir = mkdir(tmpdir, "subdir")
 	var config = fixture.GetConfig()
-	config.collectionPathnameExpression=""
+	config.CollectionPathnameExpression=""
 	fixture.SetConfig(config)
 
 	var _, err = fixture.UpdateSingleDirectory(subdir)
@@ -78,7 +78,7 @@ func Test_UpdateSingleDirectory_will_fail_when_filename_expression_is_incorrect(
 
 	var subdir = mkdir(tmpdir, "subdir")
 	var config = fixture.GetConfig()
-	config.collectionPathnameExpression="{{.Iinvalid call}}"
+	config.CollectionPathnameExpression="{{.Iinvalid call}}"
 	fixture.SetConfig(config)
 
 	var _, err = fixture.UpdateSingleDirectory(subdir)
@@ -300,7 +300,7 @@ func Test_UpdateSingleDirectoryi_with_custom_collection_name_expression(t *testi
 	fixture := createFixture()
 	var config = fixture.GetConfig()
 	config.IgnoreWarnings = true
-	config.collectionPathnameExpression = "{{.Path -1}}-{{.Path 0}}.rscollection"
+	config.CollectionPathnameExpression = "{{.Path -1}}-{{.Path 0}}.rscollection"
 	fixture.SetConfig(config)
 	tmpdir := mktmp("Test_UpdateSingleDirectoryi_with_custom_collection_name_expression")
 	defer os.RemoveAll(tmpdir)
@@ -332,7 +332,7 @@ func Test__UpdateSingleDirectoryi_with_custom_absolute_collection_name_expressio
         var config = fixture.GetConfig()                                        
         config.IgnoreWarnings = true                                            
 	
-        config.collectionPathnameExpression = filepath.Join(colldir, "{{.Path 0}}.rscollection")
+        config.CollectionPathnameExpression = filepath.Join(colldir, "{{.Path 0}}.rscollection")
         fixture.SetConfig(config)                                               
 
         subdir := mkdir(tmpdir, "subdir")

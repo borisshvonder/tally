@@ -24,7 +24,7 @@ type tally struct {
 func NewTally() Tally {
 	var ret = new(tally)
 	ret.config.LogVerbosity = 3
-	ret.config.collectionPathnameExpression = "{{.Path 0}}.rscollection"
+	ret.config.CollectionPathnameExpression = "{{.Path 0}}.rscollection"
 	ret.SetLog(ioutil.Discard)
 	return ret
 }
@@ -96,7 +96,7 @@ func (tally *tally) updateChildren(directory string) (bool, error) {
 				return ret, err
 			}
 		} else {
-			tally.debug("Skipping file", file.Name())
+			tally.debug("Skipping file cause it is not directory", file.Name())
 		}
 	}
 
@@ -419,7 +419,7 @@ func (tally *tally) resolveCollectionFileForDirectory(directory string) (string,
 
 	if ret == "" {
 		var tplErr = new(ExpressionError)
-		tplErr.expression = tally.config.collectionPathnameExpression
+		tplErr.expression = tally.config.CollectionPathnameExpression
 		tplErr.message = "Evaluates to empty string"
 		tally.err(tplErr)
 		return "", tplErr
@@ -450,7 +450,7 @@ func (context *pathnameEvaluationContext) Path(idx int) string {
 
 func (tally *tally) ensureTemplateCompiled() error {
 	if tally.collectionPathnameTemplate == nil {
-		var tpl, err = tally.compileTemplate(tally.config.collectionPathnameExpression)
+		var tpl, err = tally.compileTemplate(tally.config.CollectionPathnameExpression)
 		if err != nil {
 			return err
 		}

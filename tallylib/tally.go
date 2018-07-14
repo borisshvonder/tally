@@ -68,11 +68,11 @@ type TallyConfig struct {
 	// something more fancy, like for ex 
 	// "{{.Path(-1)}}-{{.Path(0)}}.rscollection", refer to 
 	// TallyPathNameEvalutationContext for available template functions
-	collectionPathnameExpression string
+	CollectionPathnameExpression string
 
 }
 
-// When resolving collection name (see TallyConfig.collectionPathnameExpression)
+// When resolving collection name (see TallyConfig.CollectionPathnameExpression)
 // the template expression is executed against this interface.
 type TallyPathNameEvalutationContext interface {
 	// Returns path component of the directory
