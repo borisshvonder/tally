@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"text/template"
-	"bytes"
 	"strings"
 )
 
@@ -41,10 +40,10 @@ func (tally *tally) SetConfig(cfg TallyConfig) {
 
 func (tally *tally) SetLog(logfile io.Writer) {
 	tally.log = logfile
+	tally.initLog()
 }
 
 func (tally *tally) init(directory string) (string, error)  {
-	tally.initLog()
 	var err = tally.ensureTemplateCompiled()
 	var ret string
 	if err == nil {
@@ -377,45 +376,27 @@ func (tally *tally) initLog() {
 
 func (tally *tally) err(v ...interface{}) {
 	if tally.config.LogVerbosity >= 1 {
-		tally.outputToLog(tally.loggerErr, v)
+		tally.loggerErr.Println(v)
 	}
 }
 
 func (tally *tally) warn(v ...interface{}) {
 	if tally.config.LogVerbosity >= 2 {
-		tally.outputToLog(tally.loggerWarn, v)
+		tally.loggerWarn.Println(v)
 	}
 }
 
 func (tally *tally) info(v ...interface{}) {
 	if tally.config.LogVerbosity >= 3 {
-		tally.outputToLog(tally.loggerInfo, v)
+		tally.loggerInfo.Println(v)
 	}
 }
 
 func (tally *tally) debug(v ...interface{}) {
 	if tally.config.LogVerbosity >= 4 {
-		tally.outputToLog(tally.loggerDebug, v)
+		tally.loggerDebug.Println(v)
 	}
 }
-
-func (tally *tally) outputToLog(logger *log.Logger, v ...interface{}) {
-	var first = true
-	for _, obj := range v {
-		if first {
-			first = false
-		} else {
-			logger.Print(" ")
-		}
-
-		if obj == nil {
-			logger.Print("nil")
-		} else {
-			logger.Print(v)
-		}
-	}
-}
-
 
 func (tally *tally) isDir(file os.FileInfo) bool {
 	return file.Mode().IsDir()
@@ -433,9 +414,11 @@ func (tally *tally) resolveCollectionFileForDirectory(directory string) (string,
 	var ret string
 	ret, err = tally.executeTemplate(tally.collectionPathnameTemplate, context)
 	if err != nil {
-		tally.debug("Resolved collection file for", directory, ":", ret)
+		return "", err
 	}
-	return ret, err
+	ret = filepath.Join(filepath.Dir(directory), ret)
+	tally.debug("Resolved collection file for", directory, ":", ret)
+	return ret, nil
 }
 
 type pathnameEvaluationContext struct {
@@ -465,7 +448,7 @@ func (tally *tally) ensureTemplateCompiled() error {
 func (tally *tally) compileTemplate(expr string) (*template.Template, error) {
 	var tpl = template.New(expr)
 	var err error
-	_, err = tpl.Parse(expr)
+	tpl, err = tpl.Parse(expr)
 	if err != nil {
 		var tplErr = new(ExpressionError)
 		tplErr.expression = expr
@@ -488,7 +471,7 @@ func (tally *tally) createEvaluationContext(directory string) (TallyPathNameEval
 }
 
 func (tally *tally) executeTemplate(tpl *template.Template, context TallyPathNameEvalutationContext) (string, error) {
-	var buf bytes.Buffer
+	var buf strings.Builder
 	var err = tpl.Execute(io.Writer(&buf), context)
 	if err != nil {
 		var tplErr = new(ExpressionError)
@@ -499,7 +482,7 @@ func (tally *tally) executeTemplate(tpl *template.Template, context TallyPathNam
 		return "", tplErr
 		
 	}
-	var ret = buf.String()
-	tally.debug("executeTemplate(", tpl.Name(), ", context ) return", ret)
+	var ret string = buf.String()
+	tally.debug("executeTemplate return", ret)
 	return ret, nil
 }

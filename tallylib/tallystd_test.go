@@ -12,7 +12,7 @@ import (
 func createFixture() Tally {
 	fixture := NewTally()
 	// Uncomment to enable logging:
-	fixture.SetLog(os.Stdout)
+	//fixture.SetLog(os.Stdout)
 	var config TallyConfig = fixture.GetConfig()
 	config.LogVerbosity = 100
 	fixture.SetConfig(config)
