@@ -59,6 +59,35 @@ type TallyConfig struct {
 	//   4 - warnings + errors + info + debug
 	// more - increase logging more and more
 	LogVerbosity int
+
+	// This expression is evalated by standard go text/template framework
+	// when resolving collection file name from directory(for which 
+	// collection is mad) path.
+	// By default it is simply "{{.Path(0)}}.rscollection", which makes
+	// collection file name same as directory name. You can specify
+	// something more fancy, like for ex 
+	// "{{.Path(-1)}}-{{.Path(0)}}.rscollection", refer to 
+	// TallyPathNameEvalutationContext for available template functions
+	collectionPathnameExpression string
+
+}
+
+// When resolving collection name (see TallyConfig.collectionPathnameExpression)
+// the template expression is executed against this interface.
+type TallyPathNameEvalutationContext interface {
+	// Returns path component of the directory
+	// idx=0 means directory name,
+	// idx=-1 means parent directory name and so on, for example, for
+	// directory="/my/directory/1/2":
+	//    Path(0)  returns "2"
+	//    Path(-1) returns "1"
+	//    Path(-2) returns "directory"
+	//    Path(-3) returns "my"
+	//    Path(-4) returns ""
+	// For any non-existing component empty string will be returned: 
+	//    Path(-4) returns ""
+	//    Path(1)  returns ""
+	Path(idx int) string
 }
 
 type AccessError struct {
@@ -71,3 +100,12 @@ func (e *AccessError) Error() string {
 	return e.filepath + " " + e.message + " " + e.cause.Error()
 }
 
+type ExpressionError struct {
+	expression string // Expression caused error
+	message    string // Error message
+	cause      error  // underlying error, if any
+}
+
+func (e *ExpressionError) Error() string {
+	return e.expression + ": " + e.message + " " + e.cause.Error()
+}

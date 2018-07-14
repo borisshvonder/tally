@@ -383,19 +383,19 @@ func (tally *tally) err(v ...interface{}) {
 
 func (tally *tally) warn(v ...interface{}) {
 	if tally.config.LogVerbosity >= 2 {
-		tally.outputToLog(tally.loggerWarn, v)
+		tally.loggerWarn.Println(v)
 	}
 }
 
 func (tally *tally) info(v ...interface{}) {
 	if tally.config.LogVerbosity >= 3 {
-		tally.outputToLog(tally.loggerInfo, v)
+		tally.loggerInfo.Println(v)
 	}
 }
 
 func (tally *tally) debug(v ...interface{}) {
 	if tally.config.LogVerbosity >= 4 {
-		tally.outputToLog(tally.loggerDebug, v)
+		tally.loggerDebug.Println(v)
 	}
 }
 

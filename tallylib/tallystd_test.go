@@ -6,13 +6,14 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+	"strings"
 )
 
 func createFixture() Tally {
 	fixture := NewTally()
 	// Uncomment to enable logging:
-	//fixture.SetLog(os.Stdout)
-	var config TallyConfig
+	fixture.SetLog(os.Stdout)
+	var config TallyConfig = fixture.GetConfig()
 	config.LogVerbosity = 100
 	fixture.SetConfig(config)
 	return fixture
@@ -438,7 +439,7 @@ func Test_UpdateRecursive(t *testing.T) {
 	assertWillNotUpdateRecursive(t, fixture, subdir2)
 	assertWillNotUpdateRecursive(t, fixture, subdir1)
 
-	var coll2File = resolveCollectionFileForDirectory(subdir2)
+	var coll2File = resolveCollectionFileSimple(subdir2)
 	var sha2 = readShaFor(coll2File)
 
 	subdir3 := mkdir(subdir2, "subdir3")
@@ -449,12 +450,18 @@ func Test_UpdateRecursive(t *testing.T) {
 	assertUpdateRecursive(t, fixture, subdir3)
 	assertShaChanged(t, coll2File, sha2)
 }
+
+func resolveCollectionFileSimple(directory string) string {
+	var normalized = filepath.Clean(directory)
+	return normalized+".rscollection"
+}
+
 func  Test_UpdateRecursive_will_update_hirerarchy(t *testing.T) {
 	var tmpdir = mktmp("Test_UpdateRecursive_will_update_hirerarchy")
 	defer os.RemoveAll(tmpdir)
 	var fixture = setup_9_directories_testcase(t, tmpdir)
 	
-	var coll2File = resolveCollectionFileForDirectory(filepath.Join(tmpdir, "1", "2"))
+	var coll2File = resolveCollectionFileSimple(filepath.Join(tmpdir, "1", "2"))
 	var sha2 = readShaFor(coll2File)
 
 	writefile(filepath.Join(tmpdir, "1", "2", "3", "4", "5", "6", "7", "8", "9"), "file9", "changed")
@@ -468,10 +475,10 @@ func  Test_UpdateRecursive_will_stop_updating_parents_when_encounters_directory_
 	defer os.RemoveAll(tmpdir)
 	var fixture = setup_9_directories_testcase(t, tmpdir)
 	
-	var coll2File = resolveCollectionFileForDirectory(filepath.Join(tmpdir, "1", "2"))
+	var coll2File = resolveCollectionFileSimple(filepath.Join(tmpdir, "1", "2"))
 	var sha2 = readShaFor(coll2File)
 
-	var coll4File = resolveCollectionFileForDirectory(filepath.Join(tmpdir, "1", "2", "3", "4"))
+	var coll4File = resolveCollectionFileSimple(filepath.Join(tmpdir, "1", "2", "3", "4"))
 	os.RemoveAll(coll4File)
 	var err = os.Mkdir(coll4File, os.ModeDir|os.ModePerm)
 	if err != nil {
@@ -490,10 +497,10 @@ func  Test_UpdateRecursive_will_stop_updating_parents_when_encounters_unreadable
 	defer os.RemoveAll(tmpdir)
 	var fixture = setup_9_directories_testcase(t, tmpdir)
 
-	var coll2File = resolveCollectionFileForDirectory(filepath.Join(tmpdir, "1", "2"))
+	var coll2File = resolveCollectionFileSimple(filepath.Join(tmpdir, "1", "2"))
 	var sha2 = readShaFor(coll2File)
 
-	var coll4File = resolveCollectionFileForDirectory(filepath.Join(tmpdir, "1", "2", "3", "4"))
+	var coll4File = resolveCollectionFileSimple(filepath.Join(tmpdir, "1", "2", "3", "4"))
 	os.Chmod(coll4File, 0)
 
 	var subdir5 = filepath.Join(tmpdir, "1", "2", "3", "4", "5")
@@ -549,7 +556,7 @@ func assertShaChanged(t *testing.T, fullpath, oldSha string) {
 
 func readShaFor(fullpath string) string {
 	var dir = filepath.Dir(fullpath)
-	var collectionFile =  resolveCollectionFileForDirectory(dir)
+	var collectionFile =  resolveCollectionFileSimple(dir)
 	var fdesc, err = os.Open(collectionFile)
 	if err != nil {
 		panic(err)
@@ -598,7 +605,7 @@ func assertUpdateRecursive(t *testing.T, fixture Tally, directory string) RSColl
 }
 
 func assertWillNotUpdateRecursive(t *testing.T, fixture Tally, directory string) {
-	var collectionFile = resolveCollectionFileForDirectory(directory)
+	var collectionFile = resolveCollectionFileSimple(directory)
 	var oldTimestamp = getTimestampSafe(collectionFile)
 	if update(t, fixture, directory, true) {
 		t.Log("tally reported collection changed while it was not supposed to")
@@ -612,7 +619,7 @@ func assertWillNotUpdateRecursive(t *testing.T, fixture Tally, directory string)
 
 
 func assertWillNotUpdateSingleDirectory(t *testing.T, fixture Tally, directory string) {
-	var collectionFile = resolveCollectionFileForDirectory(directory)
+	var collectionFile = resolveCollectionFileSimple(directory)
 	var oldTimestamp = getTimestampSafe(collectionFile)
 	if update(t, fixture, directory, false) {
 		t.Log("tally reported collection changed while it was not supposed to")
@@ -649,7 +656,7 @@ func update(t *testing.T, fixture Tally, directory string, recursive bool) bool 
 }
 
 func loadCollectionForDirectory(t *testing.T, directory string) RSCollection {
-	collectionFile := resolveCollectionFileForDirectory(directory)
+	collectionFile := resolveCollectionFileSimple(directory)
 	return loadCollection(t, collectionFile)
 }
 
@@ -711,13 +718,48 @@ func assertStringEquals(t *testing.T, expected, actual string) {
 	}
 }
 
-func Test_resolveCollectionFileForDirectory(t *testing.T) {
-	assertStringEquals(t, "dir.rscollection", resolveCollectionFileForDirectory("dir"))
-	assertStringEquals(t, "dir.rscollection", resolveCollectionFileForDirectory("dir/"))
-	assertStringEquals(t, "parent/dir.rscollection", resolveCollectionFileForDirectory("parent/dir"))
-	assertStringEquals(t, "/parent/dir.rscollection", resolveCollectionFileForDirectory("/parent/dir"))
-	assertStringEquals(t, "/parent/dir.rscollection", resolveCollectionFileForDirectory("/parent/dir/"))
-	assertStringEquals(t, ".rscollection", resolveCollectionFileForDirectory(""))
-	assertStringEquals(t, "/.rscollection", resolveCollectionFileForDirectory("/"))
+func Test_resolveRscollectionName(t *testing.T) {
+	assertPathNameEvaluatesTo(t, "directory.rscollection", "/path/to/directory", "{{.Path 0}}.rscollection")
+	assertPathNameEvaluatesTo(t, "to-directory.rscollection", "/path/to/directory", "{{.Path -1}}-{{.Path 0}}.rscollection")
+	assertPathNameEvaluatesTo(t, "-path-to-directory-.rscollection", "/path/to/directory", 
+		"{{.Path -3}}-{{.Path -2}}-{{.Path -1}}-{{.Path 0}}-{{.Path 1}}.rscollection")
 }
 
+func Test_executeTemplate_InvalidTemplate(t *testing.T) {
+	var tallyImpl *tally = createFixture().(*tally)
+	var _, err = tallyImpl.compileTemplate("{--{invalid")
+	if err != nil {
+		t.Log("Should fail on invalid template")
+		t.Fail()
+	}
+}
+
+func assertPathNameEvaluatesTo(t *testing.T, expected, path, expr string) {
+	var tallyImpl = createFixture().(*tally)
+	var actual, err = evaluatePathName(tallyImpl, path, expr)
+	if err != nil {
+		t.Log(err)
+		t.Fail()
+	}
+	assertStringEquals(t, expected, actual)
+}
+
+func evaluatePathName(tally *tally, path, expr string) (string, error) {
+	var context = mockEvaluationContext(path)
+	var tpl, err = tally.compileTemplate(expr)
+	if err != nil {
+		return "", err
+	}
+	if tpl == nil {
+		panic("Returned template is nil")
+	}
+	var ret string
+	ret, err = tally.executeTemplate(tpl, context)
+	return ret, err
+}
+
+func mockEvaluationContext (path string) TallyPathNameEvalutationContext {
+	var ret  = new(pathnameEvaluationContext)
+	ret.path = strings.Split(path, string(filepath.Separator))
+	return ret
+}
