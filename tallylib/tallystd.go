@@ -249,7 +249,7 @@ func (tally *tally) updateSingeFileInDir(oldColl, newColl RSCollection, fullpath
 	if oldFile != nil {
 		newColl.UpdateFile(oldFile)
 	}
-	changed, err := tally.updateFile(fullpath, filepath.Join(fullpath, name), newColl)
+	changed, err := tally.updateFile(fullpath, fullpath, newColl)
 	if err != nil {
 		return changed, err
 	}
