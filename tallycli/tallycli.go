@@ -76,7 +76,7 @@ BUGS
 
 	flag.BoolVar(&config.IgnoreWarnings, "IgnoreWarnings", false, "ignore warnings, should be fine for most usecases")
 	flag.BoolVar(&config.RemoveExtraFiles, "RemoveExtraFiles", false, "remove any files referenced in .rscollections that tool does not handle")
-	flag.BoolVar(&config.UpdateParents, "UpdateParents", false, "when updating a directory, also update parent directories")
+	flag.BoolVar(&config.UpdateParents, "UpdateParents", true, "when updating a directory, also update parent directories")
 	flag.BoolVar(&config.ForceUpdate, "ForceUpdate", false, "rehash files regardless of their sizes and timestamps")
 	flag.IntVar(&config.LogVerbosity, "LogVerbosity", 3, "log level [0-4], default:3")
 
