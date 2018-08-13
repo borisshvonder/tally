@@ -119,7 +119,7 @@ func (coll *collection) StoreTo(out io.Writer) error {
 	var _, err = out.Write([]byte(xmlHeader))
 
 	var data []byte
-	data, err = xml.Marshal(xmlColl)
+	data, err = xml.MarshalIndent(xmlColl, "", "\t")
 
 	if err == nil {
 		_, err = out.Write(data)
