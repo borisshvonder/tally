@@ -52,12 +52,12 @@ func (tally *tally) init(directory string) (string, error)  {
 	return ret, err
 }
 
-func (tally *tally) UpdateRecursive(directory string) (bool, error) {
+func (tally *tally) UpdateRecursive(directory string, digDepth int) (bool, error)  {
 	var normalizedPath, err = tally.init(directory)
 	if err != nil {
 		return false, err
 	}
-	tally.info("UpdateRecursive(", normalizedPath, ")")
+	tally.info("UpdateRecursive(", normalizedPath, ", ", digDepth, ")")
 	err = tally.assertDirectory(normalizedPath)
 	if err != nil {
 		return false, err
@@ -66,23 +66,26 @@ func (tally *tally) UpdateRecursive(directory string) (bool, error) {
 	tally.debug("Stage1: updating children")
 	var ret bool
 	
-	ret, err = tally.updateChildren(normalizedPath)
+	ret, err = tally.updateChildren(normalizedPath, digDepth, 0)
 	if err != nil {
 		return ret, err
 	}
 
 
 	if tally.config.UpdateParents && ret {
-		tally.debug("Stage3: updating parents")
+		tally.debug("Stage2: updating parents")
 		_, err = tally.updateParents(normalizedPath)
 	}
 
 	return ret, err
 }
 
-func (tally *tally) updateChildren(directory string) (bool, error) {
-	var files, err = tally.listDirectory(directory)
+func (tally *tally) updateChildren(directory string, digDepth, depth int) (bool, error) {
+	if digDepth>=0 && depth>=digDepth {
+		return tally.UpdateSingleDirectory(directory, true)
+	}
 
+	var files, err = tally.listDirectory(directory)
 	var ret = false	
 	var changed = false
 	
@@ -90,7 +93,7 @@ func (tally *tally) updateChildren(directory string) (bool, error) {
 		if tally.isDir(file) {
 			tally.debug("Invoking updateChildren(", file.Name(), ")")
 			var fullpath = filepath.Join(directory, file.Name())
-			changed, err = tally.updateChildren(fullpath)
+			changed, err = tally.updateChildren(fullpath, digDepth, depth+1)
 			ret = ret || changed
 			if err != nil {
 				return ret, err
@@ -100,7 +103,7 @@ func (tally *tally) updateChildren(directory string) (bool, error) {
 		}
 	}
 
-	changed, err = tally.UpdateSingleDirectory(directory)
+	changed, err = tally.UpdateSingleDirectory(directory, false)
 	ret = ret || changed
 	if err != nil {
 		return ret, err
@@ -130,7 +133,7 @@ func (tally *tally) updateParents(directory string) (bool, error) {
 				tally.info("Updating parent", parent)
 
 				var changed bool
-				changed, err = tally.UpdateSingleDirectory(parent)
+				changed, err = tally.UpdateSingleDirectory(parent, false)
 				ret = ret || changed
 				if err != nil {
 					return ret, err
@@ -148,7 +151,7 @@ func (tally *tally) updateParents(directory string) (bool, error) {
 	return ret, nil
 }
 
-func (tally *tally) UpdateSingleDirectory(directory string) (bool, error) {
+func (tally *tally) UpdateSingleDirectory(directory string, addChildren bool) (bool, error) {
 	var normalizedPath, err = tally.init(directory)
 	if err != nil {
 		return false, err
@@ -178,51 +181,10 @@ func (tally *tally) UpdateSingleDirectory(directory string) (bool, error) {
 	newColl = NewCollection()
 	newColl.InitEmpty()
 
-	var files []os.FileInfo
-	files, err = tally.listDirectory(normalizedPath)
-	var ret = false
-	var changed bool
-
-	for _, file := range files {
-		var name = file.Name()
-		var fullpath = filepath.Join(normalizedPath, name)
-		if tally.isFile(file) {
-			tally.debug("Working on file", name)
-			changed, err = tally.updateSingeFileInDir(oldColl, newColl, fullpath)
-			ret = ret || changed
-			if err != nil {
-				return ret, err
-			}
-		} else if tally.isDir(file) {
-			// try to find collection file
-			collectionFile, err = tally.resolveCollectionFileForDirectory(fullpath)
-			if err != nil {
-				return ret, err
-			}
-			
-			if normalizedPath != filepath.Dir(collectionFile) {
-				stat, err := os.Stat(collectionFile)
-				if err == nil {
-					if !tally.isFile(stat) {
-						err = tally.accessError(collectionFile, "collection file is a directory", err)
-						tally.warn(err)
-						if !tally.config.IgnoreWarnings {
-							return ret, err
-						}
-					} else {
-						changed, err = tally.updateSingeFileInDir(oldColl, newColl, collectionFile)
-						ret = ret || changed
-						if err != nil {
-							return ret, err
-						}
-					}
-				} else if !os.IsNotExist(err) {
-					return changed, tally.accessError(collectionFile, "Cannot stat", err)
-				}
-			}
-		} else {
-			tally.debug("Skipping", file.Name(), "because it is not a regular file")
-		}
+	var ret bool
+	ret, err = tally.updateSingle(normalizedPath, "", addChildren, oldColl, newColl)
+	if err != nil {
+		return ret, err
 	}
 
 	// files left in old collection could mean files were removed from disk
@@ -241,20 +203,57 @@ func (tally *tally) UpdateSingleDirectory(directory string) (bool, error) {
 	return ret, err
 }
 
-func (tally *tally) updateSingeFileInDir(oldColl, newColl RSCollection, fullpath string) (bool, error) {
-	var name = filepath.Base(fullpath)
-	var oldFile = oldColl.ByName(name)
-	oldColl.RemoveFile(name)
+
+func (tally *tally) updateSingle(
+	parentDir, childPath string, 
+	addChildren bool, 
+	oldColl, newColl RSCollection) (bool, error) {
+
+	var directory = filepath.Join(parentDir, childPath)
+	var files, err = tally.listDirectory(directory)
+	var ret = false
+	var changed bool
+
+	for _, file := range files {
+		var name = file.Name()
+		var childPath = filepath.Join(childPath, name)
+		if tally.isFile(file) {
+			tally.debug("Working on file", name)
+			changed, err = tally.updateSingleFileInDir(parentDir, childPath, oldColl, newColl)
+			ret = ret || changed
+			if err != nil {
+				return ret, err
+			}
+		} else if tally.isDir(file) {
+			if addChildren {
+				tally.info("Adding directory", childPath, "to the collection")
+				changed, err = tally.updateSingle(parentDir, childPath, true, oldColl, newColl)
+				ret = ret || changed
+				if err != nil {
+					return ret, err
+				}
+			}
+		} else {
+			tally.debug("Skipping", file.Name(), "because it is not a regular file")
+		}
+	}
+
+	return ret, err
+}
+
+func (tally *tally) updateSingleFileInDir(parentDir, childPath string, oldColl, newColl RSCollection) (bool, error) {
+	var oldFile = oldColl.ByName(childPath)
+	oldColl.RemoveFile(childPath)
 
 	if oldFile != nil {
 		newColl.UpdateFile(oldFile)
 	}
-	changed, err := tally.updateFile(fullpath, fullpath, newColl)
+	changed, err := tally.updateFile(parentDir, childPath, newColl)
 	if err != nil {
 		return changed, err
 	}
 	if changed {
-		tally.info("Detected change in", name)
+		tally.info("Detected change in", childPath)
 	}
 
 	return changed, nil
@@ -306,10 +305,10 @@ func (tally *tally) removeMissingFiles(directory string, oldColl, newColl RSColl
 	return ret
 }
 
-func (tally *tally) updateFile(directory, fullpath string, coll RSCollection) (bool, error) {
-	var name = filepath.Base(fullpath)
-	tally.debug("Checking file", name, "in directory", directory)
-	var ret, err = updateFile(coll, name, fullpath, tally.config.ForceUpdate)
+func (tally *tally) updateFile(parentDir, childPath string, coll RSCollection) (bool, error) {
+	tally.debug("Checking file", childPath, "in directory", parentDir)
+	var fullpath = filepath.Join(parentDir, childPath)
+	var ret, err = updateFile(coll, childPath, fullpath, tally.config.ForceUpdate)
 
 	if err != nil {
 		// Failure to update single file is not critical

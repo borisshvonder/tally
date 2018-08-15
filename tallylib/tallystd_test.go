@@ -31,7 +31,7 @@ func Test_DefaultConfig(t *testing.T) {
 func Test_UpdateSingleDirectory_will_fail_when_no_directory(t *testing.T) {
 	fixture := createFixture()
 	
-	var _, err = fixture.UpdateSingleDirectory("this-directory-does-notexist")
+	var _, err = fixture.UpdateSingleDirectory("this-directory-does-notexist", false)
 	if err == nil {
 		t.Log("Should fail when directory does not exist")
 		t.Fail()
@@ -46,7 +46,7 @@ func Test_UpdateSingleDirectory_will_fail_when_no_access(t *testing.T) {
 	subdir := filepath.Join(tmpdir, "forbidden")
 	os.Mkdir(subdir, 0)
 	
-	var _, err = fixture.UpdateSingleDirectory(subdir)
+	var _, err = fixture.UpdateSingleDirectory(subdir, false)
 	if err == nil {
 		t.Log("Should fail when directory has incorrect permssions")
 		t.Fail()
@@ -63,7 +63,7 @@ func Test_UpdateSingleDirectory_will_fail_when_filename_expression_is_empty(t *t
 	config.CollectionPathnameExpression=""
 	fixture.SetConfig(config)
 
-	var _, err = fixture.UpdateSingleDirectory(subdir)
+	var _, err = fixture.UpdateSingleDirectory(subdir, false)
 	if err == nil {
 		t.Log("Should fail due to collection file expression empty")
 		t.Fail()
@@ -81,7 +81,7 @@ func Test_UpdateSingleDirectory_will_fail_when_filename_expression_is_incorrect(
 	config.CollectionPathnameExpression="{{.Iinvalid call}}"
 	fixture.SetConfig(config)
 
-	var _, err = fixture.UpdateSingleDirectory(subdir)
+	var _, err = fixture.UpdateSingleDirectory(subdir, false)
 	if err == nil {
 		t.Log("Should fail due to collection file expression invalid")
 		t.Fail()
@@ -96,7 +96,7 @@ func Test_UpdateSingleDirectory_will_fail_when_pointed_to_file(t *testing.T) {
 	subdir := mkdir(tmpdir, "forbidden")
 	var file =  writefile(subdir, "file1", "Hello, world!")
 	
-	var _, err = fixture.UpdateSingleDirectory(file)
+	var _, err = fixture.UpdateSingleDirectory(file, false)
 	if err == nil {
 		t.Log("Should fail when target directory is a file")
 		t.Fail()
@@ -114,7 +114,7 @@ func Test_UpdateSingleDirectory_will_fail_when_no_access_to_file(t *testing.T) {
 	var file =  writefile(subdir, "file1", "Hello, world!")
 	os.Chmod(file, 0)
 	
-	var _, err = fixture.UpdateSingleDirectory(subdir)
+	var _, err = fixture.UpdateSingleDirectory(subdir, false)
 	if err == nil {
 		t.Log("Should fail when input file has no read permssions")
 		t.Fail()
@@ -153,7 +153,7 @@ func Test_UpdateSingleDirectory_will_fail_when_invalid_collecton_file(t *testing
 	var subdir = mkdir(tmpdir, "subdir")
 	writefile(tmpdir, "subdir.rscollection", "INVALID")
 	
-	var _, err = fixture.UpdateSingleDirectory(subdir)
+	var _, err = fixture.UpdateSingleDirectory(subdir, false)
 	if err == nil {
 		t.Log("Should fail when collection file is bad")
 		t.Fail()
@@ -193,7 +193,7 @@ func do_test_UpdateSingleDirectory_when_no_access_to_collecton_file(fixture Tall
 	var collectionFile =  writefile(tmpdir, "subdir.rscollection", "<RsCollection/>")
 	os.Chmod(collectionFile, perm)
 	
-	var _, err = fixture.UpdateSingleDirectory(subdir)
+	var _, err = fixture.UpdateSingleDirectory(subdir, false)
 	if err != nil {
 		print(err)
 	}
@@ -208,7 +208,7 @@ func Test_will_fail_if_collectionFile_is_directory(t *testing.T) {
 	var subdir = mkdir(tmpdir, "subdir")
 	mkdir(tmpdir, "subdir.rscollection")
 
-	var _, err = fixture.UpdateSingleDirectory(subdir)
+	var _, err = fixture.UpdateSingleDirectory(subdir, false)
 	if err == nil {
 		t.Log("Should fail when trying to load from non-file")
 		t.Fail()
@@ -296,7 +296,7 @@ func Test_UpdateSingleDirectory_will_RemoveExtraFiles(t *testing.T) {
 	}
 }
 
-func Test_UpdateSingleDirectoryi_with_custom_collection_name_expression(t *testing.T) {
+func Test_UpdateSingleDirectory_with_custom_collection_name_expression(t *testing.T) {
 	fixture := createFixture()
 	var config = fixture.GetConfig()
 	config.IgnoreWarnings = true
@@ -405,10 +405,43 @@ func Test_UpdateSingleDirectory(t *testing.T) {
 	assertWillNotUpdateSingleDirectory(t, fixture, subdir)
 }
 
+func Test_UpdateSingleDirectory_addChildren(t *testing.T) {
+	fixture := createFixture()
+	var config = fixture.GetConfig()
+	config.IgnoreWarnings = true
+	fixture.SetConfig(config)
+	tmpdir := mktmp("Test_UpdateSingleDirectory")
+	defer os.RemoveAll(tmpdir)
+	
+	subdir1 := mkdir(tmpdir, "subdir1")
+	writefile(subdir1, "file1", "Hello, world!")
+
+	subdir2 := mkdir(subdir1, "subdir2")
+	writefile(subdir2, "file2", "Hello 2")
+
+	subdir3 := mkdir(subdir2, "subdir3")
+	writefile(subdir3, "file3", "Hello 3")
+
+	var changed, err = fixture.UpdateSingleDirectory(subdir1,  true)
+	if err != nil {
+		t.Log("UpdateSingleDirectory failed", err)
+		t.Fail()
+	}
+	if !changed {
+		t.Log("Tally did not report a change")
+		t.Fail()
+	}
+	var coll = loadCollectionForDirectory(t, subdir1)
+	assertFileInCollection(t, coll, "file1", "943a702d06f34599aee1f8da8ef9f7296031d699")
+	assertFileInCollection(t, coll, "subdir2/file2", "465b0f33e43df18353e0395b3c455cf4473f198b")
+	assertFileInCollection(t, coll, "subdir2/subdir3/file3", "25f1ffc108e20daaa36d26c3d3d53749d80a6cdf")
+	assertCollectionSize(t, 3, coll)
+}
+
 func Test_UpdateRecursive_will_fail_when_no_directory(t *testing.T) {
 	fixture := createFixture()
 	
-	var _, err = fixture.UpdateRecursive("this-directory-does-notexist")
+	var _, err = fixture.UpdateRecursive("this-directory-does-notexist", -1)
 	if err == nil {
 		t.Log("Should fail when directory does not exist")
 		t.Fail()
@@ -423,7 +456,7 @@ func Test_UpdateRecursive_will_fail_when_no_access(t *testing.T) {
 	subdir := filepath.Join(tmpdir, "forbidden")
 	os.Mkdir(subdir, 0)
 	
-	var _, err = fixture.UpdateRecursive(subdir)
+	var _, err = fixture.UpdateRecursive(subdir, -1)
 	if err == nil {
 		t.Log("Should fail when directory has incorrect permssions")
 		t.Fail()
@@ -440,7 +473,7 @@ func Test_UpdateRecursive_will_fail_when_no_access_to_subdir(t *testing.T) {
 	subdir2 := filepath.Join(tmpdir, "subdir1")
 	os.Mkdir(subdir2, 0)
 	
-	var _, err = fixture.UpdateRecursive(subdir1)
+	var _, err = fixture.UpdateRecursive(subdir1, -1)
 	if err == nil {
 		t.Log("Should fail when subdirectory has incorrect permssions")
 		t.Fail()
@@ -457,7 +490,7 @@ func Test_UpdateRecursive_will_fail_when_pointed_to_file(t *testing.T) {
 	subdir := mkdir(tmpdir, "forbidden")
 	var file =  writefile(subdir, "file1", "Hello, world!")
 	
-	var _, err = fixture.UpdateRecursive(file)
+	var _, err = fixture.UpdateRecursive(file, -1)
 	if err == nil {
 		t.Log("Should fail when target directory is a file")
 		t.Fail()
@@ -474,7 +507,7 @@ func Test_UpdateRecursive_will_fail_when_no_access_to_file(t *testing.T) {
 	var file =  writefile(subdir, "file1", "Hello, world!")
 	os.Chmod(file, 0)
 	
-	var _, err = fixture.UpdateRecursive(subdir)
+	var _, err = fixture.UpdateRecursive(subdir, -1)
 	if err == nil {
 		t.Log("Should fail when input file has no read permssions")
 		t.Fail()
@@ -492,7 +525,7 @@ func Test_UpdateRecursive_will_fail_when_no_access_to_subfile(t *testing.T) {
 	var file2 =  writefile(subdir2, "file2", "Hello, world!")
 	os.Chmod(file2, 0)
 	
-	var _, err = fixture.UpdateRecursive(subdir1)
+	var _, err = fixture.UpdateRecursive(subdir1, -1)
 	if err == nil {
 		t.Log("Should fail when input file in subdir has no read permssions")
 		t.Fail()
@@ -593,7 +626,7 @@ func  Test_UpdateRecursive_will_stop_updating_parents_when_encounters_unreadable
 	var subdir5 = filepath.Join(tmpdir, "1", "2", "3", "4", "5")
 	writefile(subdir5, "file5", "change")
 
-	var _,  err = fixture.UpdateRecursive(subdir5)
+	var _,  err = fixture.UpdateRecursive(subdir5, -1)
 	if err == nil {
 		t.Log("Update should fail due to unreadable rscollection")
 		t.Fail()
@@ -731,9 +764,9 @@ func update(t *testing.T, fixture Tally, directory string, recursive bool) bool 
 	var changed bool
 	var err error
 	if recursive {
-		changed, err = fixture.UpdateRecursive(directory)
+		changed, err = fixture.UpdateRecursive(directory, -1)
 	} else {
-		changed, err = fixture.UpdateSingleDirectory(directory)
+		changed, err = fixture.UpdateSingleDirectory(directory, false)
 	}
 	if err != nil {
 		t.Log("Cannot update", err)

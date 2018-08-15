@@ -14,11 +14,22 @@ type Tally interface {
 	SetConfig(cfg TallyConfig)
 
 	// returns true if made any changes or false if no changes done
-	UpdateSingleDirectory(directory string) (bool, error)
+	// if addChildren=true, then also add all subdirectories and files
+	// to this directory collection
+	UpdateSingleDirectory(directory string, addChildren bool) (bool, error)
 
 	// Update all subdirectories and all parent directories (if any)
 	// returns true if made any changes or false if no changes done
-	UpdateRecursive(directory string) (bool, error)
+	// When digDepth>=0, recurse only this levels down. After that,
+	// for all subdirs found, invoke 
+	// UpdateSingleDIrectory(,addChildren=true).
+	//
+	// Some corner cases:
+	// * UpdateRecursive(directory, 0) is same as 
+        //   UpdateSingleDirectory(directory, true)
+        // * UpdateRecursive(directory, -1) ignores the digDepth and always
+	//   recurse to bottom
+	UpdateRecursive(directory string, digDepth int) (bool, error)
 
 	// Where to log stuff, by default don't write anywhere
 	SetLog(log io.Writer)
@@ -69,7 +80,6 @@ type TallyConfig struct {
 	// "{{.Path(-1)}}-{{.Path(0)}}.rscollection", refer to 
 	// TallyPathNameEvalutationContext for available template functions
 	CollectionPathnameExpression string
-
 }
 
 // When resolving collection name (see TallyConfig.CollectionPathnameExpression)

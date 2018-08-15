@@ -196,7 +196,9 @@ func Test_StoreTo_oneRecord(t *testing.T) {
 	var str = buf.String()
 	assertStrEquals(t, "coll.StoreTo()",
 		`<!DOCTYPE RsCollection>
-<RsCollection><File sha1="sha1" name="name1" size="1024" updated=""></File></RsCollection>`, str)
+<RsCollection>
+	<File sha1="sha1" name="name1" size="1024" updated=""></File>
+</RsCollection>`, str)
 }
 
 func Test_StoreTo_multipleRecords(t *testing.T) {
