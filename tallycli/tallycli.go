@@ -60,6 +60,40 @@ COLLECTION EXPRESSIONS
 
 	* -CollectionPathnameExpression="/collections/{{.Path 0}}.rscollection"
 
+DIG DEPTH
+	By default, tally creates single .rscollection for each directory in
+	a tree. Sometimes it might not be desirable. For example, given this
+	typical music tree:
+
+	/music/Sepultura/1993_Roots/Lyrics
+
+	it is not quite makes sense creating collections 
+	/music/Sepultura/1993_Roots.rscollection 
+	and
+	/music/Sepultura/1993_Roots/Lyrics.rscollection 
+
+	For that reason, the default behavior could be changed using -digDepth
+	parameter. It is better explain by example:
+
+	tally -DigDepth=2 /music
+	will create collections:
+	/music/Sepultura.rscollection
+	/music/Sepultura/1993_Roots.rscollection
+	and the last collection will also include Lyrics folder.
+
+	To make names better, we can do
+	 tally -DigDepth=2 \
+	  -CollectionPathnameExpression="{{.Path -1}}-{{.Path 0}}.rscollection"\
+	  /music
+
+	which will create collections:
+	/music/music-Sepultura.rscollection
+	/musci/Sepultura/Sepultura-1993_Roots.rscollection
+
+	The corner case is -DigDepth=0, in this case tally will generate just
+	one large collection containing all files in a given folder.
+	
+
 BUGS
 	In order to efficiently detect if file needs it's sha1 recalculated, 
 	this tool stores file modification time in .rscollection file as 
@@ -73,6 +107,7 @@ BUGS
 
 	var tally = tallylib.NewTally()
 	var config = tally.GetConfig()
+	var digDepth int
 
 	flag.BoolVar(&config.IgnoreWarnings, "IgnoreWarnings", false, "ignore warnings, should be fine for most usecases")
 	flag.BoolVar(&config.RemoveExtraFiles, "RemoveExtraFiles", false, "remove any files referenced in .rscollections that tool does not handle")
@@ -86,6 +121,8 @@ BUGS
 	flag.StringVar(&config.CollectionPathnameExpression, "CollectionPathnameExpression", "{{.Path 0}}.rscollection", 	
 		"Template expression for resolving .rscollection file name, see COLLECTION EXPRESSIONS")
 
+	flag.IntVar(&digDepth, "DigDepth", -1, "create intermediate .rscollections up to this depth, -1 means infinite. See DIG DEPTH")
+
 	flag.Parse()
 
 	tally.SetConfig(config)
@@ -95,9 +132,9 @@ BUGS
 		path = filepath.Clean(path)
 		var err error
 		if UpdateRecursive {
-			_, err = tally.UpdateRecursive(path)
+			_, err = tally.UpdateRecursive(path, digDepth)
 		} else {
-			_, err = tally.UpdateSingleDirectory(path)
+			_, err = tally.UpdateSingleDirectory(path, false)
 		}
 		if err != nil {
 			fmt.Print(err)
