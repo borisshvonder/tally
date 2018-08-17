@@ -576,7 +576,7 @@ func resolveCollectionFileSimple(directory string) string {
 	return normalized+".rscollection"
 }
 
-func  Test_UpdateRecursive_will_update_hirerarchy(t *testing.T) {
+func Test_UpdateRecursive_will_update_hirerarchy(t *testing.T) {
 	var tmpdir = mktmp("Test_UpdateRecursive_will_update_hirerarchy")
 	defer os.RemoveAll(tmpdir)
 	var fixture = setup_9_directories_testcase(t, tmpdir)
@@ -588,6 +588,123 @@ func  Test_UpdateRecursive_will_update_hirerarchy(t *testing.T) {
 	assertUpdateRecursive(t, fixture, filepath.Join(tmpdir, "1"))
 
 	assertShaChanged(t, coll2File, sha2)
+}
+
+func Test_UpdateRecursive_digDepth_0(t *testing.T) {
+	var tmpdir = mktmp("Test_UpdateRecursive_will_update_hirerarchy")
+	defer os.RemoveAll(tmpdir)
+	var fixture = setup_9_directories(t, tmpdir)
+
+	var changed, err = fixture.UpdateRecursive(filepath.Join(tmpdir, "1"), 0)
+	if err != nil {
+		t.Log(err)
+		t.Fail()
+	}
+	if !changed {
+		t.Log("tally did not report a change")
+		t.Fail()
+	}
+
+	var coll = loadCollection(t, resolveCollectionFileSimple(filepath.Join(tmpdir, "1")))
+	assertFileInCollection(t, coll, "file1", "d22ecc269ddb778c3996c096981f0d38fe1a34a9")
+	assertFileInCollection(t, coll, "2/file2", "34d7e3c97557e006b730bb979b14fa78ef49d4ed")
+	assertFileInCollection(t, coll, "2/3/file3", "ec4767b4b8329f7367256499982d294082554d3d")
+	assertFileInCollection(t, coll, "2/3/4/file4", "9b5d4ea26f122f51e321e116fae2dc932fe7d0b0")
+	assertFileInCollection(t, coll, "2/3/4/5/file5", "6d66ea6e1f1e2bb2e420b23f302931dc8438d093")
+	assertFileInCollection(t, coll, "2/3/4/5/6/file6", "09f736137f24042c16be739d0649051f5ff6950b")
+	assertFileInCollection(t, coll, "2/3/4/5/6/7/file7", "3b807d4eeb0fee5cda9aa69092c9dcbc04cf7afe")
+	assertFileInCollection(t, coll, "2/3/4/5/6/7/8/file8", "39209371c05e83607c055009d32516b70fcb822c")
+	assertFileInCollection(t, coll, "2/3/4/5/6/7/8/9/file9", "41f4bde54a17b753ef14572e7076cb9fb19af2d9")
+
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2.rscollection"))
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3.rscollection"))
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4.rscollection"))
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4", "5.rscollection"))
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4", "5", "6.rscollection"))
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4", "5", "6", "7.rscollection"))
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4", "5", "6", "7", "8.rscollection"))
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4", "5", "6", "7", "8", "9.rscollection"))
+}
+
+func Test_UpdateRecursive_digDepth_1(t *testing.T) {
+	var tmpdir = mktmp("Test_UpdateRecursive_will_update_hirerarchy")
+	defer os.RemoveAll(tmpdir)
+	var fixture = setup_9_directories(t, tmpdir)
+	var subdir1 = filepath.Join(tmpdir, "1")
+
+	var changed, err = fixture.UpdateRecursive(subdir1, 1)
+	if err != nil {
+		t.Log(err)
+		t.Fail()
+	}
+	if !changed {
+		t.Log("tally did not report a change")
+		t.Fail()
+	}
+
+	var coll1 = loadCollection(t, resolveCollectionFileSimple(subdir1))
+	assertFileInCollection(t, coll1, "2.rscollection", "")
+
+	var subdir2 = filepath.Join(subdir1, "2")
+	var coll2 = loadCollection(t, resolveCollectionFileSimple(subdir2)) 
+
+	assertFileInCollection(t, coll2, "3/file3", "ec4767b4b8329f7367256499982d294082554d3d")
+	assertFileInCollection(t, coll2, "3/4/file4", "9b5d4ea26f122f51e321e116fae2dc932fe7d0b0")
+	assertFileInCollection(t, coll2, "3/4/5/file5", "6d66ea6e1f1e2bb2e420b23f302931dc8438d093")
+	assertFileInCollection(t, coll2, "3/4/5/6/file6", "09f736137f24042c16be739d0649051f5ff6950b")
+	assertFileInCollection(t, coll2, "3/4/5/6/7/file7", "3b807d4eeb0fee5cda9aa69092c9dcbc04cf7afe")
+	assertFileInCollection(t, coll2, "3/4/5/6/7/8/file8", "39209371c05e83607c055009d32516b70fcb822c")
+	assertFileInCollection(t, coll2, "3/4/5/6/7/8/9/file9", "41f4bde54a17b753ef14572e7076cb9fb19af2d9")
+
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3.rscollection"))
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4.rscollection"))
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4", "5.rscollection"))
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4", "5", "6.rscollection"))
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4", "5", "6", "7.rscollection"))
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4", "5", "6", "7", "8.rscollection"))
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4", "5", "6", "7", "8", "9.rscollection"))
+}
+
+func Test_UpdateRecursive_digDepth_2(t *testing.T) {
+	var tmpdir = mktmp("Test_UpdateRecursive_will_update_hirerarchy")
+	defer os.RemoveAll(tmpdir)
+	var fixture = setup_9_directories(t, tmpdir)
+	var subdir1 = filepath.Join(tmpdir, "1")
+
+	var changed, err = fixture.UpdateRecursive(subdir1, 2)
+	if err != nil {
+		t.Log(err)
+		t.Fail()
+	}
+	if !changed {
+		t.Log("tally did not report a change")
+		t.Fail()
+	}
+
+	var coll1 = loadCollection(t, resolveCollectionFileSimple(subdir1))
+	assertFileInCollection(t, coll1, "2.rscollection", "")
+
+	var subdir2 = filepath.Join(subdir1, "2")
+	var coll2 = loadCollection(t, resolveCollectionFileSimple(subdir2)) 
+	assertFileInCollection(t, coll2, "3.rscollection", "")
+
+	var subdir3 = filepath.Join(subdir2, "3")
+	var coll3 = loadCollection(t, resolveCollectionFileSimple(subdir3)) 
+
+	assertFileInCollection(t, coll3, "file3", "ec4767b4b8329f7367256499982d294082554d3d")
+	assertFileInCollection(t, coll3, "4/file4", "9b5d4ea26f122f51e321e116fae2dc932fe7d0b0")
+	assertFileInCollection(t, coll3, "4/5/file5", "6d66ea6e1f1e2bb2e420b23f302931dc8438d093")
+	assertFileInCollection(t, coll3, "4/5/6/file6", "09f736137f24042c16be739d0649051f5ff6950b")
+	assertFileInCollection(t, coll3, "4/5/6/7/file7", "3b807d4eeb0fee5cda9aa69092c9dcbc04cf7afe")
+	assertFileInCollection(t, coll3, "4/5/6/7/8/file8", "39209371c05e83607c055009d32516b70fcb822c")
+	assertFileInCollection(t, coll3, "4/5/6/7/8/9/file9", "41f4bde54a17b753ef14572e7076cb9fb19af2d9")
+
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4.rscollection"))
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4", "5.rscollection"))
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4", "5", "6.rscollection"))
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4", "5", "6", "7.rscollection"))
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4", "5", "6", "7", "8.rscollection"))
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4", "5", "6", "7", "8", "9.rscollection"))
 }
 
 func  Test_UpdateRecursive_will_stop_updating_parents_when_encounters_directory_in_place_of_collection_file(t *testing.T) {
@@ -635,7 +752,8 @@ func  Test_UpdateRecursive_will_stop_updating_parents_when_encounters_unreadable
 	assertShaSame(t, coll2File, sha2)
 }
 
-func setup_9_directories_testcase(t *testing.T, tmpdir string) Tally {
+
+func setup_9_directories(t *testing.T, tmpdir string) Tally {
 	fixture := createFixture()
 	var config = fixture.GetConfig()
 	config.IgnoreWarnings = true
@@ -643,15 +761,30 @@ func setup_9_directories_testcase(t *testing.T, tmpdir string) Tally {
 	fixture.SetConfig(config)
 
 	subdir1 := mkdir(tmpdir, "1")
+	writefile(subdir1, "file1", "Hello 1!")
 	subdir2 := mkdir(subdir1, "2")
+	writefile(subdir2, "file2", "Hello 2!")
 	subdir3 := mkdir(subdir2, "3")
+	writefile(subdir3, "file3", "Hello 3!")
 	subdir4 := mkdir(subdir3, "4")
+	writefile(subdir4, "file4", "Hello 4!")
 	subdir5 := mkdir(subdir4, "5")
+	writefile(subdir5, "file5", "Hello 5!")
 	subdir6 := mkdir(subdir5, "6")
+	writefile(subdir6, "file6", "Hello 6!")
 	subdir7 := mkdir(subdir6, "7")
+	writefile(subdir7, "file7", "Hello 7!")
 	subdir8 := mkdir(subdir7, "8")
+	writefile(subdir8, "file8", "Hello 8!")
 	subdir9 := mkdir(subdir8, "9")
-	writefile(subdir9, "file9", "Hello 8!")
+	writefile(subdir9, "file9", "Hello 9!")
+
+	return fixture
+}
+
+func setup_9_directories_testcase(t *testing.T, tmpdir string) Tally {
+	var fixture = setup_9_directories(t, tmpdir)
+	var subdir1 = filepath.Join(tmpdir, "1")
 	assertUpdateRecursive(t, fixture, subdir1)
 	assertWillNotUpdateRecursive(t, fixture, subdir1)
 
@@ -710,7 +843,7 @@ func assertFileInCollection(t *testing.T, coll RSCollection, name, sha1 string) 
 	if file == nil {
 		t.Log("no", name, "found in collection")
 		t.Fail()
-	} else if sha1 != file.Sha1() {
+	} else if sha1 != "" && sha1 != file.Sha1() {
 		t.Log(name, "sha1 is", file.Sha1())
 		t.Fail()
 	}
@@ -882,6 +1015,14 @@ func assertPathNameEvaluatesTo(t *testing.T, expected, path, expr string) {
 		t.Fail()
 	}
 	assertStringEquals(t, expected, actual)
+}
+
+func assertPathNotExists(t *testing.T, path string) {
+	var _, err = os.Stat(path)
+	if !os.IsNotExist(err) {
+		t.Log("Path", path, "exists")
+		t.Fail()
+	}
 }
 
 func evaluatePathName(tally *tally, path, expr string) (string, error) {
