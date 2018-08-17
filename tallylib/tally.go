@@ -101,13 +101,13 @@ type TallyPathNameEvalutationContext interface {
 }
 
 type AccessError struct {
-	filepath string // path to file
+	fullpath string // path to file
 	message  string // additional message
 	cause    error  // underlying error, if any
 }
 
 func (e *AccessError) Error() string {
-	return e.filepath + " " + e.message + " " + e.cause.Error()
+	return e.fullpath + " " + e.message + " " + e.cause.Error()
 }
 
 type ExpressionError struct {

@@ -182,7 +182,7 @@ func (tally *tally) UpdateSingleDirectory(directory string, addChildren bool) (b
 	newColl.InitEmpty()
 
 	var ret bool
-	ret, err = tally.updateSingle(normalizedPath, "", addChildren, oldColl, newColl)
+	ret, err = tally.updateSingleWithRecursion("", normalizedPath, addChildren, oldColl, newColl)
 	if err != nil {
 		return ret, err
 	}
@@ -203,31 +203,37 @@ func (tally *tally) UpdateSingleDirectory(directory string, addChildren bool) (b
 	return ret, err
 }
 
-
-func (tally *tally) updateSingle(
-	parentDir, childPath string, 
+// Here and after:
+//  fullpath - filesystem path, should be formed using filepath.Join since
+//             filesystems may have different separators
+//  collpath - rscollection path, separator is always '/' therefore joined by
+//             colljoin function
+func (tally *tally) updateSingleWithRecursion(
+	collpath, fullpath string, 
 	addChildren bool, 
 	oldColl, newColl RSCollection) (bool, error) {
 
-	var directory = filepath.Join(parentDir, childPath)
-	var files, err = tally.listDirectory(directory)
+	tally.debug("updateSingle(", collpath, fullpath, addChildren, "...)")
+
+	var files, err = tally.listDirectory(fullpath)
 	var ret = false
 	var changed bool
 
 	for _, file := range files {
 		var name = file.Name()
-		var childPath = filepath.Join(childPath, name)
+		var childFullpath = filepath.Join(fullpath, name)
+		var childCollpath = colljoin(collpath, name)
 		if tally.isFile(file) {
 			tally.debug("Working on file", name)
-			changed, err = tally.updateSingleFileInDir(parentDir, childPath, oldColl, newColl)
+			changed, err = tally.updateSingleFileInDir(childCollpath, childFullpath, oldColl, newColl)
 			ret = ret || changed
 			if err != nil {
 				return ret, err
 			}
 		} else if tally.isDir(file) {
 			if addChildren {
-				tally.info("Adding directory", childPath, "to the collection")
-				changed, err = tally.updateSingle(parentDir, childPath, true, oldColl, newColl)
+				tally.info("Adding directory", childCollpath, "to the collection")
+				changed, err = tally.updateSingleWithRecursion(childCollpath, childFullpath, true, oldColl, newColl)
 				ret = ret || changed
 				if err != nil {
 					return ret, err
@@ -241,19 +247,19 @@ func (tally *tally) updateSingle(
 	return ret, err
 }
 
-func (tally *tally) updateSingleFileInDir(parentDir, childPath string, oldColl, newColl RSCollection) (bool, error) {
-	var oldFile = oldColl.ByName(childPath)
-	oldColl.RemoveFile(childPath)
+func (tally *tally) updateSingleFileInDir(collpath, fullpath string, oldColl, newColl RSCollection) (bool, error) {
+	var oldFile = oldColl.ByName(collpath)
+	oldColl.RemoveFile(collpath)
 
 	if oldFile != nil {
 		newColl.UpdateFile(oldFile)
 	}
-	changed, err := tally.updateFile(parentDir, childPath, newColl)
+	changed, err := tally.updateFile(collpath, fullpath, newColl)
 	if err != nil {
 		return changed, err
 	}
 	if changed {
-		tally.info("Detected change in", childPath)
+		tally.info("Detected change in", collpath)
 	}
 
 	return changed, nil
@@ -305,10 +311,9 @@ func (tally *tally) removeMissingFiles(directory string, oldColl, newColl RSColl
 	return ret
 }
 
-func (tally *tally) updateFile(parentDir, childPath string, coll RSCollection) (bool, error) {
-	tally.debug("Checking file", childPath, "in directory", parentDir)
-	var fullpath = filepath.Join(parentDir, childPath)
-	var ret, err = updateFile(coll, childPath, fullpath, tally.config.ForceUpdate)
+func (tally *tally) updateFile(collpath, fullpath string, coll RSCollection) (bool, error) {
+	tally.debug("Checking file", fullpath)
+	var ret, err = updateFile(coll, collpath, fullpath, tally.config.ForceUpdate)
 
 	if err != nil {
 		// Failure to update single file is not critical
@@ -391,10 +396,10 @@ func (tally *tally) loadExistingCollection(fromFile string) (RSCollection, error
 	return coll, nil
 }
 
-func (tally *tally) accessError(filepath string, message string, cause error) error {
+func (tally *tally) accessError(fullpath string, message string, cause error) error {
 	var ret = new(AccessError)
 
-	ret.filepath = filepath
+	ret.fullpath = fullpath
 	ret.message = message
 	ret.cause = cause
 
@@ -545,4 +550,12 @@ func (tally *tally) executeTemplate(tpl *template.Template, context TallyPathNam
 	ret = buf.String()
 	tally.debug("executeTemplate return", ret)
 	return ret, nil
+}
+
+func colljoin(parent, child string) string {
+	if parent == "" {
+		return child
+	} else {
+		return parent+"/"+child
+	}
 }
