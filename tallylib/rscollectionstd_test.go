@@ -176,6 +176,35 @@ func Test_LoadFrom_multipleRecords(t *testing.T) {
 	}
 }
 
+
+func Test_LoadFrom_subdirectories(t *testing.T) {
+	var xml = `<!DOCTYPE RsCollection>
+		<RsCollection>
+			<Directory name="subdir1">
+				<Directory name="subdir2">
+					<File sha1="6551d11f6e8d3ec2731f70a2573b887637e94559" 
+						name="name2" />
+				</Directory>
+				<File sha1="8551d11f6e8d3ec2731f70a2573b887637e94559" 
+					name="name1" size="1024" />
+			</Directory>
+		</RsCollection>`
+
+	var fixture, err = loadCollectionFromString(xml)
+	if err != nil {
+		failOnError(t, err)
+	} else {
+		assertFile(t, fixture.ByName("subdir1/name1"), "subdir1/name1",
+			"8551d11f6e8d3ec2731f70a2573b887637e94559",
+			1024, (time.Time{}))
+
+		assertFile(t, fixture.ByName("subdir1/subdir2/name2"), "subdir1/subdir2/name2",
+			"6551d11f6e8d3ec2731f70a2573b887637e94559",
+			0, (time.Time{}))
+	}
+}
+
+
 func Test_StoreTo_emptyCollection(t *testing.T) {
 	var coll = NewCollection()
 	var buf bytes.Buffer
@@ -225,6 +254,35 @@ func Test_StoreTo_multipleRecords(t *testing.T) {
 		t.Log("name2 not found in " + str)
 		t.Fail()
 	}
+}
+
+
+func Test_StoreTo_Subdirectories(t *testing.T) {
+	var coll = NewCollection()
+	coll.InitEmpty()
+	coll.Update("name0", "sha0", 10240, (time.Time{}))
+	coll.Update("dir1/name1", "sha1", 10241, (time.Time{}))
+	coll.Update("dir1/dir2/name2", "sha2", 10242, (time.Time{}))
+	coll.Update("dir1/dir2/dir3/name3", "sha3", 10243, (time.Time{}))
+
+	var buf bytes.Buffer
+	coll.StoreTo(io.Writer(&buf))
+
+	var str = buf.String()
+	assertStrEquals(t, "coll.StoreTo()",
+		`<!DOCTYPE RsCollection>
+<RsCollection>
+	<Directory name="dir1">
+		<Directory name="dir2">
+			<Directory name="dir3">
+				<File sha1="sha3" name="name3" size="10243" updated=""></File>
+			</Directory>
+			<File sha1="sha2" name="name2" size="10242" updated=""></File>
+		</Directory>
+		<File sha1="sha1" name="name1" size="10241" updated=""></File>
+	</Directory>
+	<File sha1="sha0" name="name0" size="10240" updated=""></File>
+</RsCollection>`, str)
 
 }
 
@@ -248,10 +306,15 @@ func assertEmptyCollection(t *testing.T, fixture RSCollection) {
 }
 
 func assertFile(t *testing.T, file RSCollectionFile, name, sha1 string, size int64, timestamp time.Time) {
-	assertStrEquals(t, "file.Name()", name, file.Name())
-	assertStrEquals(t, "file.Sha1()", sha1, file.Sha1())
-	assertUint64Equals(t, "file.Size()", size, file.Size())
-	assertTimeEquals(t, "file.Timestamp()", timestamp, file.Timestamp())
+	if file == nil {
+		t.Log("file", name, "not found in collection")
+		t.Fail()
+	} else {
+		assertStrEquals(t, "file.Name()", name, file.Name())
+		assertStrEquals(t, "file.Sha1()", sha1, file.Sha1())
+		assertUint64Equals(t, "file.Size()", size, file.Size())
+		assertTimeEquals(t, "file.Timestamp()", timestamp, file.Timestamp())
+	}
 }
 
 func assertStrEquals(t *testing.T, context, expected, actual string) {

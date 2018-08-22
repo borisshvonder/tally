@@ -551,11 +551,3 @@ func (tally *tally) executeTemplate(tpl *template.Template, context TallyPathNam
 	tally.debug("executeTemplate return", ret)
 	return ret, nil
 }
-
-func colljoin(parent, child string) string {
-	if parent == "" {
-		return child
-	} else {
-		return parent+"/"+child
-	}
-}

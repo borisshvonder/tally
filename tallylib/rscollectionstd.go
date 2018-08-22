@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"time"
+	"strings"
 )
 
 const xmlHeader = "<!DOCTYPE RsCollection>\n"
@@ -66,6 +67,14 @@ func (coll *collection) ByName(name string) RSCollectionFile {
 
 type XmlRsCollection struct {
 	XMLName xml.Name   `xml:"RsCollection"`
+	Directories []*XmlDirectory `xml:"Directory"`
+	Files   []*XmlFile `xml:"File"`
+}
+
+type XmlDirectory struct {
+	XMLName xml.Name `xml:"Directory"`
+	Name    string   `xml:"name,attr"`
+	Directories []*XmlDirectory `xml:"Directory"`
 	Files   []*XmlFile `xml:"File"`
 }
 
@@ -86,34 +95,57 @@ func (coll *collection) LoadFrom(in io.Reader) error {
 		return err
 	}
 
-	var errs string
-
+	var errs strings.Builder
 	coll.files = make(map[string]RSCollectionFile)
 
-	for i := range parsed.Files {
-		var xmlFile = parsed.Files[i]
+	coll.loadDirectories("", parsed.Directories, &errs)
+	coll.loadFiles("", parsed.Files, &errs)
+
+	var errsStr = errs.String()
+	if errsStr != "" {
+		return errors.New(errsStr)
+	} else {
+		return nil
+	}
+}
+
+func (coll *collection) loadDirectories(prefix string, directories []*XmlDirectory, errs *strings.Builder) {
+	for i := range directories {
+		var directory = directories[i]
+		var path = colljoin(prefix, directory.Name)
+		coll.loadDirectories(path, directory.Directories, errs)
+		coll.loadFiles(path, directory.Files, errs)
+	}
+}
+
+func (coll *collection) loadFiles(prefix string, files []*XmlFile, errs *strings.Builder) {
+	for i := range files {
+		var xmlFile = files[i]
 		var file, err = xmlFileToStd(xmlFile)
 		if err != nil {
-			errs += err.Error() + " "
+			errs.WriteString(err.Error()+"\n")
+		} else {
+			var collpath = colljoin(prefix, file.name)
+			file.name = collpath
+			coll.files[collpath] = file
 		}
-		coll.files[file.name] = file
 	}
-
-	if errs != "" {
-		err = errors.New(errs)
-	}
-
-	return err
 }
 
 func (coll *collection) StoreTo(out io.Writer) error {
 	var xmlColl = new(XmlRsCollection)
 	xmlColl.Files = make([]*XmlFile, len(coll.files))
 
-	var i = 0
 	for _, v := range coll.files {
-		xmlColl.Files[i] = stdFileToXml(v)
-		i += 1
+		var xmlFile = stdFileToXml(v)
+		var path = collsplit(xmlFile.Name)
+		if len(path) == 1 {
+			xmlColl.Files = appendFileToSlice(xmlColl.Files, xmlFile)
+		} else {
+			var directory = findDirectory(xmlColl, path[:len(path)-1])
+			xmlFile.Name = path[len(path)-1]
+			directory.Files = appendFileToSlice(directory.Files, xmlFile)
+		}
 	}
 
 	var _, err = out.Write([]byte(xmlHeader))
@@ -126,6 +158,76 @@ func (coll *collection) StoreTo(out io.Writer) error {
 	}
 
 	return err
+}
+
+func findDirectory(xmlColl *XmlRsCollection, path [] string) *XmlDirectory {
+	var dirs = xmlColl.Directories
+	var firstName = path[0]
+	var dir = findDirectoryInSlice(dirs, firstName)
+	if dir == nil {
+		xmlColl.Directories, dir = appendDirectoryToSlice(dirs, firstName)
+	}
+
+	path = path[1:]
+
+	for i := range path {
+		var p = path[i]
+		var nextDir *XmlDirectory = findDirectoryInSlice(dir.Directories, p)
+		if nextDir == nil {
+			dir.Directories, nextDir = appendDirectoryToSlice(dir.Directories, p)
+		}
+		dir = nextDir
+	}
+
+	return dir
+}
+
+func findDirectoryInSlice(slice []*XmlDirectory, name string) *XmlDirectory {
+	if slice == nil {
+		return nil
+	}
+	
+	for i := range slice {
+		var dir = slice[i]
+		if dir.Name == name {
+			return dir
+		}
+	}
+	return nil
+}
+
+func appendDirectoryToSlice(slice []*XmlDirectory, name string) ([]*XmlDirectory, *XmlDirectory) {
+	var dir = new(XmlDirectory)
+	dir.Name = name
+	var ret = slice
+	if ret == nil {
+		ret = make([]*XmlDirectory, 4)[0:0]
+	}
+	var l = len(ret)
+	if l == cap(ret) {
+		var newSlice = make([]*XmlDirectory, l*2)
+		copy(newSlice, ret)
+		ret = newSlice
+	}
+	ret = ret[0:l+1]
+	ret[l] = dir
+	return ret, dir
+}
+
+func appendFileToSlice(slice []*XmlFile, file *XmlFile) []*XmlFile {
+	var ret = slice
+	if ret == nil {
+		ret = make([]*XmlFile, 16)[0:0]
+	}
+	var l = len(ret)
+	if l==cap(ret) {
+		var newSlice = make([]*XmlFile, l*2)
+		copy(newSlice, ret)
+		ret = newSlice
+	}
+	ret = ret[0:l+1]
+	ret[l] = file
+	return ret
 }
 
 func xmlFileToStd(xmlFile *XmlFile) (*file, error) {
@@ -169,4 +271,16 @@ func (file *file) Size() int64 {
 
 func (file *file) Timestamp() time.Time {
 	return file.timestamp
+}
+
+func colljoin(parent, child string) string {
+	if parent == "" {
+		return child
+	} else {
+		return parent+"/"+child
+	}
+}
+
+func collsplit(path string) []string {
+	return strings.Split(path, "/")
 }
