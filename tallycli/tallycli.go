@@ -72,17 +72,20 @@ DIG DEPTH
 	and
 	/music/Sepultura/1993_Roots/Lyrics.rscollection 
 
-	For that reason, the default behavior could be changed using -digDepth
-	parameter. It is better explain by example:
+	For that reason, the default behavior could be changed using 
+	-MinDig and -MaxDig parameters. It is best explained by an example:
 
-	tally -DigDepth=2 /music
+	tally -MinDig=1 -MaxDig=2 /music
 	will create collections:
 	/music/Sepultura.rscollection
-	/music/Sepultura/1993_Roots.rscollection
-	and the last collection will also include Lyrics folder.
+	/music/Sepultura/1993_Roots.rscollection (this one will also include 
+           Lyrics folder.)
+        It won't, however, create collections:
+        /music.rscollecton (because depth=0 < MinDig)
+        /music/Sepultura/1993_Roots/Lyrics.rscollection (dipth=3 > MaxDig)
 
 	To make names better, we can do
-	 tally -DigDepth=2 \
+	 tally -MinDig=1 -MaxDig=2 \
 	  -CollectionPathnameExpression="{{.Path -1}}-{{.Path 0}}.rscollection"\
 	  /music
 
@@ -90,7 +93,7 @@ DIG DEPTH
 	/music/music-Sepultura.rscollection
 	/musci/Sepultura/Sepultura-1993_Roots.rscollection
 
-	The corner case is -DigDepth=0, in this case tally will generate just
+	The corner case is -MaxDig=0, in this case tally will generate just
 	one large collection containing all files in a given folder.
 	
 
@@ -107,7 +110,7 @@ BUGS
 
 	var tally = tallylib.NewTally()
 	var config = tally.GetConfig()
-	var digDepth int
+	var MinDig, MaxDig int
 
 	flag.BoolVar(&config.IgnoreWarnings, "IgnoreWarnings", false, "ignore warnings, should be fine for most usecases")
 	flag.BoolVar(&config.RemoveExtraFiles, "RemoveExtraFiles", false, "remove any files referenced in .rscollections that tool does not handle")
@@ -121,7 +124,8 @@ BUGS
 	flag.StringVar(&config.CollectionPathnameExpression, "CollectionPathnameExpression", "{{.Path 0}}.rscollection", 	
 		"Template expression for resolving .rscollection file name, see COLLECTION EXPRESSIONS")
 
-	flag.IntVar(&digDepth, "DigDepth", -1, "create intermediate .rscollections up to this depth, -1 means infinite. See DIG DEPTH")
+	flag.IntVar(&MinDig, "MinDig", 0, "create intermediate .rscollections only from this folder level down. See DIG DEPTH")
+	flag.IntVar(&MaxDig, "MaxDig", -1, "create intermediate .rscollections up to this depth, -1 means infinite. See DIG DEPTH")
 
 	flag.Parse()
 
@@ -132,7 +136,7 @@ BUGS
 		path = filepath.Clean(path)
 		var err error
 		if UpdateRecursive {
-			_, err = tally.UpdateRecursive(path, digDepth)
+			_, err = tally.UpdateRecursive(path, MinDig, MaxDig)
 		} else {
 			_, err = tally.UpdateSingleDirectory(path, false)
 		}

@@ -20,16 +20,18 @@ type Tally interface {
 
 	// Update all subdirectories and all parent directories (if any)
 	// returns true if made any changes or false if no changes done
-	// When digDepth>=0, recurse only this levels down. After that,
-	// for all subdirs found, invoke 
-	// UpdateSingleDIrectory(,addChildren=true).
+	// minDig specifies at which depth start to generate rscollection 
+        // files (0 is default, generate from top)
+	// maxDig specifies at wich depth stop generating rscollection files
+	// (default is -1, means generate until bottom)
+	// When maxDig is reached, don't generate additional rscollections,
+	// just put all subdirectories in the rscollection file at this depth
 	//
 	// Some corner cases:
-	// * UpdateRecursive(directory, 0) is same as 
+	// * UpdateRecursive(directory, 0, 0) is same as 
         //   UpdateSingleDirectory(directory, true)
-        // * UpdateRecursive(directory, -1) ignores the digDepth and always
-	//   recurse to bottom
-	UpdateRecursive(directory string, digDepth int) (bool, error)
+        // * UpdateRecursive(directory, 0, -1) always recurse to bottom
+	UpdateRecursive(directory string, minDig, maxDig int) (bool, error)
 
 	// Where to log stuff, by default don't write anywhere
 	SetLog(log io.Writer)

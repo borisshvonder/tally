@@ -52,12 +52,12 @@ func (tally *tally) init(directory string) (string, error)  {
 	return ret, err
 }
 
-func (tally *tally) UpdateRecursive(directory string, digDepth int) (bool, error)  {
+func (tally *tally) UpdateRecursive(directory string, minDig,maxDig int) (bool, error)  {
 	var normalizedPath, err = tally.init(directory)
 	if err != nil {
 		return false, err
 	}
-	tally.info("UpdateRecursive(", normalizedPath, ", ", digDepth, ")")
+	tally.info("UpdateRecursive(", normalizedPath, ", ", minDig, maxDig, ")")
 	err = tally.assertDirectory(normalizedPath)
 	if err != nil {
 		return false, err
@@ -66,7 +66,7 @@ func (tally *tally) UpdateRecursive(directory string, digDepth int) (bool, error
 	tally.debug("Stage1: updating children")
 	var ret bool
 	
-	ret, err = tally.updateChildren(normalizedPath, digDepth, 0)
+	ret, err = tally.updateChildren(normalizedPath, minDig, maxDig, 0)
 	if err != nil {
 		return ret, err
 	}
@@ -80,8 +80,8 @@ func (tally *tally) UpdateRecursive(directory string, digDepth int) (bool, error
 	return ret, err
 }
 
-func (tally *tally) updateChildren(directory string, digDepth, depth int) (bool, error) {
-	if digDepth>=0 && depth>=digDepth {
+func (tally *tally) updateChildren(directory string, minDig, maxDig, depth int) (bool, error) {
+	if maxDig>=0 && depth>=maxDig {
 		return tally.UpdateSingleDirectory(directory, true)
 	}
 
@@ -93,7 +93,7 @@ func (tally *tally) updateChildren(directory string, digDepth, depth int) (bool,
 		if tally.isDir(file) {
 			tally.debug("Invoking updateChildren(", file.Name(), ")")
 			var fullpath = filepath.Join(directory, file.Name())
-			changed, err = tally.updateChildren(fullpath, digDepth, depth+1)
+			changed, err = tally.updateChildren(fullpath, minDig, maxDig, depth+1)
 			ret = ret || changed
 			if err != nil {
 				return ret, err
@@ -103,10 +103,12 @@ func (tally *tally) updateChildren(directory string, digDepth, depth int) (bool,
 		}
 	}
 
-	changed, err = tally.UpdateSingleDirectory(directory, false)
-	ret = ret || changed
-	if err != nil {
-		return ret, err
+	if minDig<=depth {
+		changed, err = tally.UpdateSingleDirectory(directory, false)
+		ret = ret || changed
+		if err != nil {
+			return ret, err
+		}
 	}
 
 	return ret, err

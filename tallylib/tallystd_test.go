@@ -441,7 +441,7 @@ func Test_UpdateSingleDirectory_addChildren(t *testing.T) {
 func Test_UpdateRecursive_will_fail_when_no_directory(t *testing.T) {
 	fixture := createFixture()
 	
-	var _, err = fixture.UpdateRecursive("this-directory-does-notexist", -1)
+	var _, err = fixture.UpdateRecursive("this-directory-does-notexist", 0, -1)
 	if err == nil {
 		t.Log("Should fail when directory does not exist")
 		t.Fail()
@@ -456,7 +456,7 @@ func Test_UpdateRecursive_will_fail_when_no_access(t *testing.T) {
 	subdir := filepath.Join(tmpdir, "forbidden")
 	os.Mkdir(subdir, 0)
 	
-	var _, err = fixture.UpdateRecursive(subdir, -1)
+	var _, err = fixture.UpdateRecursive(subdir, 0, -1)
 	if err == nil {
 		t.Log("Should fail when directory has incorrect permssions")
 		t.Fail()
@@ -473,7 +473,7 @@ func Test_UpdateRecursive_will_fail_when_no_access_to_subdir(t *testing.T) {
 	subdir2 := filepath.Join(tmpdir, "subdir1")
 	os.Mkdir(subdir2, 0)
 	
-	var _, err = fixture.UpdateRecursive(subdir1, -1)
+	var _, err = fixture.UpdateRecursive(subdir1, 0, -1)
 	if err == nil {
 		t.Log("Should fail when subdirectory has incorrect permssions")
 		t.Fail()
@@ -490,7 +490,7 @@ func Test_UpdateRecursive_will_fail_when_pointed_to_file(t *testing.T) {
 	subdir := mkdir(tmpdir, "forbidden")
 	var file =  writefile(subdir, "file1", "Hello, world!")
 	
-	var _, err = fixture.UpdateRecursive(file, -1)
+	var _, err = fixture.UpdateRecursive(file, 0, -1)
 	if err == nil {
 		t.Log("Should fail when target directory is a file")
 		t.Fail()
@@ -507,7 +507,7 @@ func Test_UpdateRecursive_will_fail_when_no_access_to_file(t *testing.T) {
 	var file =  writefile(subdir, "file1", "Hello, world!")
 	os.Chmod(file, 0)
 	
-	var _, err = fixture.UpdateRecursive(subdir, -1)
+	var _, err = fixture.UpdateRecursive(subdir, 0, -1)
 	if err == nil {
 		t.Log("Should fail when input file has no read permssions")
 		t.Fail()
@@ -525,7 +525,7 @@ func Test_UpdateRecursive_will_fail_when_no_access_to_subfile(t *testing.T) {
 	var file2 =  writefile(subdir2, "file2", "Hello, world!")
 	os.Chmod(file2, 0)
 	
-	var _, err = fixture.UpdateRecursive(subdir1, -1)
+	var _, err = fixture.UpdateRecursive(subdir1, 0, -1)
 	if err == nil {
 		t.Log("Should fail when input file in subdir has no read permssions")
 		t.Fail()
@@ -595,7 +595,7 @@ func Test_UpdateRecursive_digDepth_0(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	var fixture = setup_9_directories(t, tmpdir)
 
-	var changed, err = fixture.UpdateRecursive(filepath.Join(tmpdir, "1"), 0)
+	var changed, err = fixture.UpdateRecursive(filepath.Join(tmpdir, "1"), 0, 0)
 	if err != nil {
 		t.Log(err)
 		t.Fail()
@@ -632,7 +632,7 @@ func Test_UpdateRecursive_digDepth_1(t *testing.T) {
 	var fixture = setup_9_directories(t, tmpdir)
 	var subdir1 = filepath.Join(tmpdir, "1")
 
-	var changed, err = fixture.UpdateRecursive(subdir1, 1)
+	var changed, err = fixture.UpdateRecursive(subdir1, 0, 1)
 	if err != nil {
 		t.Log(err)
 		t.Fail()
@@ -671,7 +671,7 @@ func Test_UpdateRecursive_digDepth_2(t *testing.T) {
 	var fixture = setup_9_directories(t, tmpdir)
 	var subdir1 = filepath.Join(tmpdir, "1")
 
-	var changed, err = fixture.UpdateRecursive(subdir1, 2)
+	var changed, err = fixture.UpdateRecursive(subdir1, 0, 2)
 	if err != nil {
 		t.Log(err)
 		t.Fail()
@@ -706,6 +706,49 @@ func Test_UpdateRecursive_digDepth_2(t *testing.T) {
 	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4", "5", "6", "7", "8.rscollection"))
 	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4", "5", "6", "7", "8", "9.rscollection"))
 }
+
+func Test_UpdateRecursive_digDepth_1_2(t *testing.T) {
+	var tmpdir = mktmp("Test_UpdateRecursive_will_update_hirerarchy")
+	defer os.RemoveAll(tmpdir)
+	var fixture = setup_9_directories(t, tmpdir)
+	var subdir1 = filepath.Join(tmpdir, "1")
+
+	var changed, err = fixture.UpdateRecursive(subdir1, 1, 2)
+	if err != nil {
+		t.Log(err)
+		t.Fail()
+	}
+	if !changed {
+		t.Log("tally did not report a change")
+		t.Fail()
+	}
+
+	assertPathNotExists(t, filepath.Join(tmpdir, "1.rscollection"))
+
+	var subdir2 = filepath.Join(subdir1, "2")
+	var coll2 = loadCollection(t, resolveCollectionFileSimple(subdir2)) 
+	assertFileInCollection(t, coll2, "3.rscollection", "")
+
+	var subdir3 = filepath.Join(subdir2, "3")
+	var coll3 = loadCollection(t, resolveCollectionFileSimple(subdir3)) 
+
+	assertFileInCollection(t, coll3, "file3", "ec4767b4b8329f7367256499982d294082554d3d")
+	assertFileInCollection(t, coll3, "4/file4", "9b5d4ea26f122f51e321e116fae2dc932fe7d0b0")
+	assertFileInCollection(t, coll3, "4/5/file5", "6d66ea6e1f1e2bb2e420b23f302931dc8438d093")
+	assertFileInCollection(t, coll3, "4/5/6/file6", "09f736137f24042c16be739d0649051f5ff6950b")
+	assertFileInCollection(t, coll3, "4/5/6/7/file7", "3b807d4eeb0fee5cda9aa69092c9dcbc04cf7afe")
+	assertFileInCollection(t, coll3, "4/5/6/7/8/file8", "39209371c05e83607c055009d32516b70fcb822c")
+	assertFileInCollection(t, coll3, "4/5/6/7/8/9/file9", "41f4bde54a17b753ef14572e7076cb9fb19af2d9")
+
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4.rscollection"))
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4", "5.rscollection"))
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4", "5", "6.rscollection"))
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4", "5", "6", "7.rscollection"))
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4", "5", "6", "7", "8.rscollection"))
+	assertPathNotExists(t, filepath.Join(tmpdir, "1", "2", "3", "4", "5", "6", "7", "8", "9.rscollection"))
+}
+
+
 
 func  Test_UpdateRecursive_will_stop_updating_parents_when_encounters_directory_in_place_of_collection_file(t *testing.T) {
 	var tmpdir = mktmp("Test_UpdateRecursive_will_stop_updating_parents_when_encounters_directory_in_place_of_collection_file")
@@ -743,7 +786,7 @@ func  Test_UpdateRecursive_will_stop_updating_parents_when_encounters_unreadable
 	var subdir5 = filepath.Join(tmpdir, "1", "2", "3", "4", "5")
 	writefile(subdir5, "file5", "change")
 
-	var _,  err = fixture.UpdateRecursive(subdir5, -1)
+	var _,  err = fixture.UpdateRecursive(subdir5, 0, -1)
 	if err == nil {
 		t.Log("Update should fail due to unreadable rscollection")
 		t.Fail()
@@ -897,7 +940,7 @@ func update(t *testing.T, fixture Tally, directory string, recursive bool) bool 
 	var changed bool
 	var err error
 	if recursive {
-		changed, err = fixture.UpdateRecursive(directory, -1)
+		changed, err = fixture.UpdateRecursive(directory, 0, -1)
 	} else {
 		changed, err = fixture.UpdateSingleDirectory(directory, false)
 	}
