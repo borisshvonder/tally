@@ -320,6 +320,32 @@ func Test_UpdateSingleDirectory_with_custom_collection_name_expression(t *testin
 	assertCollectionSize(t, 1, coll)
 }
 
+func Test_UpdateSingleDirectory_with_custom_root_expression(t *testing.T) {
+	fixture := createFixture()
+	var config = fixture.GetConfig()
+	fixture.SetLog(os.Stdout)
+	config.IgnoreWarnings = true
+	config.CollectionRootPathExpression = "{{.Path -1}}/{{.Path 0}}"
+	fixture.SetConfig(config)
+	tmpdir := mktmp("Test_UpdateSingleDirectoryi_with_custom_collection_name_expression")
+	defer os.RemoveAll(tmpdir)
+	
+	subdir1 := mkdir(tmpdir, "subdir1")
+	subdir2 := mkdir(subdir1, "subdir2")
+	writefile(subdir2, "file2", "Hello, world!")
+
+	if !update(t, fixture, subdir2, false) {
+		t.Log("tally did not report collection changed")
+		t.Fail()
+	}
+
+	var collFile = filepath.Join(subdir1, "subdir2.rscollection")
+	var coll = loadCollection(t, collFile)
+	assertFileInCollection(t, coll, "subdir1/subdir2/file2", "943a702d06f34599aee1f8da8ef9f7296031d699")
+	assertCollectionSize(t, 1, coll)
+}
+
+
 func Test__UpdateSingleDirectoryi_with_custom_absolute_collection_name_expression(t *testing.T) {
         tmpdir := mktmp("Test_UpdateSingleDirectoryi_with_custom_collection_name_expression")
         defer os.RemoveAll(tmpdir)                                              

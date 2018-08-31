@@ -15,6 +15,7 @@ type tally struct {
 	config      TallyConfig
 	log         io.Writer
 	collectionPathnameTemplate *template.Template
+	collectionRootPathTemplate *template.Template
 	loggerDebug *log.Logger
 	loggerInfo  *log.Logger
 	loggerErr   *log.Logger
@@ -44,7 +45,7 @@ func (tally *tally) SetLog(logfile io.Writer) {
 }
 
 func (tally *tally) init(directory string) (string, error)  {
-	var err = tally.ensureTemplateCompiled()
+	var err = tally.ensureTemplatesCompiled()
 	var ret string
 	if err == nil {
 		ret = filepath.Clean(directory)
@@ -184,7 +185,13 @@ func (tally *tally) UpdateSingleDirectory(directory string, addChildren bool) (b
 	newColl.InitEmpty()
 
 	var ret bool
-	ret, err = tally.updateSingleWithRecursion("", normalizedPath, addChildren, oldColl, newColl)
+	var root string
+	root, err = tally.resolveCollectionRootPathForDirectory(normalizedPath)
+	if err != nil {
+		return false, err
+	}
+	
+	ret, err = tally.updateSingleWithRecursion(root, normalizedPath, addChildren, oldColl, newColl)
 	if err != nil {
 		return ret, err
 	}
@@ -202,6 +209,14 @@ func (tally *tally) UpdateSingleDirectory(directory string, addChildren bool) (b
 		err = tally.storeCollectionToFile(newColl, collectionFile)
 	}
 
+	return ret, err
+}
+
+func (tally *tally) resolveCollectionRootPathForDirectory(directory string) (string, error) {
+	var ret, err = tally.resolveTemplate(tally.collectionRootPathTemplate, directory)
+	if err == nil {
+		tally.debug("Resolved root path", ret, "for directory", directory)
+	}
 	return ret, err
 }
 
@@ -450,16 +465,11 @@ func (tally *tally) isFile(file os.FileInfo) bool {
 }
 
 func (tally *tally) resolveCollectionFileForDirectory(directory string) (string, error) {
-	var context, err = tally.createEvaluationContext(directory)
+	var ret, err = tally.resolveTemplate(tally.collectionPathnameTemplate, directory)
 	if err != nil {
 		return "", err
 	}
-	var ret string
-	ret, err = tally.executeTemplate(tally.collectionPathnameTemplate, context)
-	if err != nil {
-		return "", err
-	}
-
+	
 	if ret == "" {
 		var tplErr = new(ExpressionError)
 		tplErr.expression = tally.config.CollectionPathnameExpression
@@ -478,6 +488,14 @@ func (tally *tally) resolveCollectionFileForDirectory(directory string) (string,
 	return ret, nil
 }
 
+func (tally *tally) resolveTemplate(tpl *template.Template, directory string) (string, error) {
+	var context, err = tally.createEvaluationContext(directory)
+	if err != nil {
+		return "", err
+	}
+	return tally.executeTemplate(tpl, context)
+}
+
 type pathnameEvaluationContext struct {
 	path []string // Array of pathname components, for "/1/2/3" it should
                       // be {"1", "2", "3"}
@@ -491,13 +509,20 @@ func (context *pathnameEvaluationContext) Path(idx int) string {
 	return context.path[arrIdx]
 }
 
-func (tally *tally) ensureTemplateCompiled() error {
+func (tally *tally) ensureTemplatesCompiled() error {
 	if tally.collectionPathnameTemplate == nil {
 		var tpl, err = tally.compileTemplate(tally.config.CollectionPathnameExpression)
 		if err != nil {
 			return err
 		}
 		tally.collectionPathnameTemplate = tpl
+	}
+	if tally.collectionRootPathTemplate == nil {
+		var tpl, err = tally.compileTemplate(tally.config.CollectionRootPathExpression)
+		if err != nil {
+			return err
+		}
+		tally.collectionRootPathTemplate = tpl
 	}
 	return nil
 }

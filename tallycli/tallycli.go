@@ -60,6 +60,43 @@ COLLECTION EXPRESSIONS
 
 	* -CollectionPathnameExpression="/collections/{{.Path 0}}.rscollection"
 
+COLLECTION ROOT PATH EXPRESSIONS
+	Default behavior is simply put files found into collection at the
+	top, for path
+	/docs/file.txt
+	the /docs.rscollection will contain file "file.txt'
+
+	However, sometimes it is desirable to put all files inside a collection
+	under common root. For example:
+
+	$ tally -CollectionRootPathExpression="MyDocs/Texts" /docs
+	will put file "MyDocs/Texts/file.txt" into the collection.
+
+	The most common example of this is when sharing music:
+
+
+	/music/Artist1/Album1
+	/music/Artist2/Album1
+
+	$ tally /music 
+
+	will generate 
+          /music/Artist1.rscollection and 
+          /music/Artist2.rscollectionwhich 
+	which both will contain "Album1.rscollection" files. 
+	When user downloads both collections, files will chash between each
+	other.
+
+	To prevent this, we could do:
+
+	$ tally -CollectionRootPathExpression="{{.Path -1}}" /music
+	which will generate collections
+	  /music/Artist1.rscollection containing
+            "Artist1/Album1.rscollection"
+	  and 
+	  /music/Artist2.rscollection containing
+	    "Artist2/Album2.rscollection
+
 DIG DEPTH
 	By default, tally creates single .rscollection for each directory in
 	a tree. Sometimes it might not be desirable. For example, given this
@@ -123,6 +160,9 @@ BUGS
 
 	flag.StringVar(&config.CollectionPathnameExpression, "CollectionPathnameExpression", "{{.Path 0}}.rscollection", 	
 		"Template expression for resolving .rscollection file name, see COLLECTION EXPRESSIONS")
+
+	flag.StringVar(&config.CollectionRootPathExpression, "CollectionRootPathExpression", "", 	
+		"Template expression for resolving root path in rscollection, see COLLECTION ROOT PATH EXPRESSIONS")
 
 	flag.IntVar(&MinDig, "MinDig", 0, "create intermediate .rscollections only from this folder level down. See DIG DEPTH")
 	flag.IntVar(&MaxDig, "MaxDig", -1, "create intermediate .rscollections up to this depth, -1 means infinite. See DIG DEPTH")

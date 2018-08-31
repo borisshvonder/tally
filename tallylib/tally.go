@@ -82,6 +82,17 @@ type TallyConfig struct {
 	// "{{.Path(-1)}}-{{.Path(0)}}.rscollection", refer to 
 	// TallyPathNameEvalutationContext for available template functions
 	CollectionPathnameExpression string
+
+	// This expression is evaluated using same framework ad 
+	// CollectionPathnameExpression
+	// By default it is empty, which means all files are simply put into
+	// collections at the top of the collection.
+	// If it is not empty, then files are put under the root path
+	// specified, for example, if CollectionRootPathExpression 
+	// evaluates to "Music/MP3", then file "Sepultura/1993/01.mp3"
+	// will be put into collection as "Music/MP3/Sepultura/1993/01.mp3".
+	// Note: the path separator is '/' regardless of OS.
+	CollectionRootPathExpression string
 }
 
 // When resolving collection name (see TallyConfig.CollectionPathnameExpression)
