@@ -1,6 +1,6 @@
 #!/bin/sh
 
-VERSION=0.6.0
+VERSION=0.7.0
 TIMESTAMP=`date -u +%Y%m%d.%H%M`
 FULLVERSION="$VERSION-$TIMESTAMP"
 
