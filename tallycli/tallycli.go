@@ -82,7 +82,7 @@ DIG DEPTH
            Lyrics folder.)
         It won't, however, create collections:
         /music.rscollecton (because depth=0 < MinDig)
-        /music/Sepultura/1993_Roots/Lyrics.rscollection (dipth=3 > MaxDig)
+        /music/Sepultura/1993_Roots/Lyrics.rscollection (depth=3 > MaxDig)
 
 	To make names better, we can do
 	 tally -MinDig=1 -MaxDig=2 \
