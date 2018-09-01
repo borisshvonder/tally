@@ -82,14 +82,14 @@ COLLECTION ROOT PATH EXPRESSIONS
 
 	will generate 
           /music/Artist1.rscollection and 
-          /music/Artist2.rscollectionwhich 
+          /music/Artist2.rscollection which 
 	which both will contain "Album1.rscollection" files. 
 	When user downloads both collections, files will chash between each
 	other.
 
 	To prevent this, we could do:
 
-	$ tally -CollectionRootPathExpression="{{.Path -1}}" /music
+	$ tally -CollectionRootPathExpression="{{.Path 0}}" /music
 	which will generate collections
 	  /music/Artist1.rscollection containing
             "Artist1/Album1.rscollection"
